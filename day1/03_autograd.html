@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8" />
+<title>03. Autograd & 계산 그래프</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+:root { --accent:#2b7cff; --accent-2:#ff7043; --ok:#00a86b; --warn:#d93025; --muted:#6b7280; --bg:#ffffff; --ink:#1f2937; }
+*{box-sizing:border-box;} html,body{margin:0;padding:0;background:#e8eaed;color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",-apple-system,sans-serif;-webkit-font-smoothing:antialiased;height:100vh;overflow:hidden;}
+.stage{position:fixed;top:54px;left:0;right:0;bottom:0;overflow:hidden;}
+.slide-wrap{width:1280px;height:720px;transform-origin:top left;position:absolute;top:0;left:0;}
+.slide{position:absolute;inset:0;background:#fff;border-radius:4px;box-shadow:0 10px 30px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08);padding:48px 56px;display:none;flex-direction:column;overflow:hidden;}
+.slide.active{display:flex;animation:fade .25s ease;} @keyframes fade{from{opacity:0;}to{opacity:1;}}
+h1{font-size:48px;margin:0 0 12px;font-weight:800;letter-spacing:-.02em;}
+h2{font-size:30px;margin:0 0 12px;font-weight:800;letter-spacing:-.01em;}
+h3{font-size:18px;color:var(--accent);margin:4px 0 10px;font-weight:700;}
+p,li{font-size:16px;line-height:1.55;margin:6px 0;} ul{margin:6px 0;padding-left:22px;} ol{padding-left:22px;}
+code{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:.9em;}
+.slide.title{align-items:center;justify-content:center;text-align:center;} .slide.title h1{font-size:64px;}
+.subtitle{color:var(--muted);font-size:20px;margin-top:10px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:stretch;flex:1;min-height:0;}
+.two-col>*{min-width:0;min-height:0;display:flex;flex-direction:column;justify-content:center;}
+.two-col>.plot-box{justify-content:flex-start;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;align-items:stretch;}
+.card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;} .card h3{margin-top:0;}
+.pros{color:var(--ok);} .cons{color:var(--warn);}
+.formula{background:#eef3ff;border-left:4px solid var(--accent);padding:10px 14px;border-radius:6px;font-family:"JetBrains Mono","Menlo",monospace;font-size:14px;margin:10px 0;white-space:pre-wrap;}
+.chip{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;margin-right:6px;}
+.chip.blue{background:#e3f2fd;color:#1565c0;} .chip.orange{background:#fff3e0;color:#e65100;}
+.chip.green{background:#e8f5e9;color:#2e7d32;} .chip.red{background:#ffebee;color:#c62828;}
+.chip.purple{background:#ede7f6;color:#5e35b1;}
+.analogy{background:linear-gradient(135deg,#eef3ff,#fff);border-radius:12px;padding:14px 18px;margin:8px 0;} .analogy strong{color:var(--accent);}
+.plot-box{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;overflow:hidden;display:flex;flex-direction:column;}
+.plot-box svg{display:block;width:100%;height:auto;flex:1;min-height:0;max-height:420px;}
+.small-note{color:var(--muted);font-size:13px;}
+table{width:100%;border-collapse:collapse;font-size:14px;} th,td{border:1px solid #e5e7eb;padding:8px 12px;text-align:left;} th{background:#f3f4f6;}
+.controls{margin-top:8px;font-size:14px;} .controls label{display:flex;align-items:center;gap:10px;margin:6px 0;}
+.controls input[type=range]{flex:1;accent-color:var(--accent);}
+.val-pill{display:inline-block;min-width:56px;padding:2px 10px;border-radius:999px;background:#eef3ff;color:var(--accent);font-family:"JetBrains Mono",monospace;font-weight:700;text-align:center;font-size:13px;}
+.val-pill.out{background:#fff3e0;color:#e65100;} .val-pill.grad{background:#e8f5e9;color:#2e7d32;}
+.hint{display:inline-block;background:#fffde7;border:1px dashed #fbc02d;border-radius:6px;padding:6px 12px;font-size:13px;color:#6b5b00;margin-top:8px;}
+.btn{padding:7px 14px;border-radius:6px;background:var(--accent);color:#fff;border:none;font-weight:600;font-size:13px;cursor:pointer;margin:3px;}
+.navbar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.94);border:1px solid #dadce0;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.08);display:flex;align-items:center;gap:12px;padding:6px 14px;z-index:100;}
+.navbar button{width:32px;height:32px;border-radius:999px;border:none;background:var(--accent);color:#fff;font-size:15px;cursor:pointer;}
+.navbar button:disabled{background:#e5e7eb;color:#999;cursor:not-allowed;}
+.navbar .pageinfo{font-weight:700;color:var(--muted);min-width:56px;text-align:center;font-size:13px;}
+.navbar .progress{width:140px;height:5px;background:#e5e7eb;border-radius:999px;overflow:hidden;}
+.navbar .progress .bar{height:100%;background:var(--accent);transition:width .3s;}
+.topnav{position:fixed;top:0;left:0;right:0;height:54px;background:#fff;border-bottom:1px solid #dadce0;padding:0 24px;display:flex;align-items:center;gap:14px;z-index:100;}
+.topnav .title{font-weight:700;font-size:16px;} .topnav .hint-key{color:var(--muted);font-size:13px;}
+</style></head><body>
+
+<div class="topnav"><div class="title">03. Autograd & 계산 그래프 🔁</div><div class="hint-key">← → 방향키 / 슬라이더로 체험</div></div>
+
+<div class="stage" id="stage"><div class="slide-wrap" id="slideWrap">
+
+<section class="slide title active">
+  <h1>Autograd & 계산 그래프</h1>
+  <div class="subtitle">PyTorch가 손으로 ∂L/∂W 를 계산해 주는 마법</div>
+  <svg width="600" height="200" viewBox="0 0 600 200" style="margin-top:30px;">
+    <defs><marker id="ar" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#666"/></marker></defs>
+    <circle cx="60" cy="100" r="22" fill="#e3f2fd" stroke="#1565c0"/><text x="60" y="105" text-anchor="middle" font-weight="700">x</text>
+    <circle cx="180" cy="100" r="22" fill="#e3f2fd" stroke="#1565c0"/><text x="180" y="105" text-anchor="middle" font-weight="700">w</text>
+    <circle cx="300" cy="100" r="22" fill="#fff3e0" stroke="#e65100"/><text x="300" y="105" text-anchor="middle" font-weight="700">×</text>
+    <circle cx="420" cy="100" r="22" fill="#fff3e0" stroke="#e65100"/><text x="420" y="105" text-anchor="middle" font-weight="700">+b</text>
+    <circle cx="540" cy="100" r="22" fill="#ffebee" stroke="#c62828"/><text x="540" y="105" text-anchor="middle" font-weight="700">L</text>
+    <line x1="82" y1="100" x2="278" y2="100" stroke="#666" marker-end="url(#ar)"/>
+    <line x1="202" y1="100" x2="278" y2="100" stroke="#666" marker-end="url(#ar)"/>
+    <line x1="322" y1="100" x2="398" y2="100" stroke="#666" marker-end="url(#ar)"/>
+    <line x1="442" y1="100" x2="518" y2="100" stroke="#666" marker-end="url(#ar)"/>
+    <path d="M 540 130 Q 300 180 60 140" stroke="#00a86b" stroke-width="2" fill="none" stroke-dasharray="5,3" marker-end="url(#ar)"/>
+    <text x="300" y="195" text-anchor="middle" fill="#00a86b" font-weight="700">backward(): 그래프를 거꾸로 따라가며 grad 누적</text>
+  </svg>
+</section>
+
+<section class="slide">
+  <h2>왜 자동 미분이 혁명인가</h2>
+  <div class="two-col">
+    <div>
+      <div class="analogy"><strong>비유: 가계부</strong>. 매 forward마다 "누가 누구에 곱해졌는지" 영수증처럼 기록 → backward 시 거꾸로 훑어 chain rule 자동 적용.</div>
+      <ul>
+        <li>손 유도 → <span class="chip red">실수투성이</span></li>
+        <li>수치 미분 → <span class="chip orange">느리고 부정확</span></li>
+        <li>자동 미분 → <span class="chip green">정확 + 빠름</span></li>
+      </ul>
+      <div class="hint">💡 Theano(2007)가 처음 대중화. 이후 모든 프레임워크의 기반.</div>
+    </div>
+    <div class="plot-box" id="b1"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>requires_grad: 추적 스위치</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">x = torch.tensor(3.0, requires_grad=True)
+y = x**2 + 2*x + 1
+y.backward()
+x.grad   # = 2x + 2 = 8</div>
+      <ul>
+        <li>requires_grad=True 텐서로 만든 결과는 자동 추적</li>
+        <li>nn.Parameter는 기본 True</li>
+        <li>입력 데이터는 보통 False</li>
+      </ul>
+      <div class="controls">
+        <label>x = <input type="range" id="rgX" min="-3" max="5" step="0.1" value="3"><span class="val-pill" id="rgXV">3.0</span></label>
+        <p>y=x²+2x+1 = <span class="val-pill out" id="rgY">16.0</span> ·
+           dy/dx=2x+2 = <span class="val-pill grad" id="rgG">8.0</span></p>
+      </div>
+      <p class="small-note">💡 추적 켜지면 메모리·연산 늘어남. 추론 시엔 끔.</p>
+    </div>
+    <div class="plot-box" id="rgBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>드래그-투-빌드 계산 그래프</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">a = x * w
+b = a + bias
+L = b ** 2</div>
+      <div class="controls">
+        <label>x = <input type="range" id="dgX" min="-2" max="2" step="0.1" value="1.0"><span class="val-pill" id="dgXV">1.0</span></label>
+        <label>w = <input type="range" id="dgW" min="-2" max="2" step="0.1" value="0.5"><span class="val-pill" id="dgWV">0.5</span></label>
+        <label>bias = <input type="range" id="dgB" min="-2" max="2" step="0.1" value="0.3"><span class="val-pill" id="dgBV">0.3</span></label>
+      </div>
+      <p class="small-note">💡 dL/dw = 2b · x — 입력이 클수록 weight grad도 큼. (BERT 학습률 1e-4 이유)</p>
+    </div>
+    <div class="plot-box" id="dgBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>연쇄 법칙을 단계별로</h2>
+  <div class="two-col">
+    <div>
+      <ol style="font-size:14px;">
+        <li>∂L/∂L = 1 (시작점)</li>
+        <li>L = b² → ∂L/∂b = 2b</li>
+        <li>b = a + bias → ∂b/∂a = 1, ∂b/∂bias = 1</li>
+        <li>∂L/∂a = ∂L/∂b · 1 = 2b</li>
+        <li>a = x·w → ∂a/∂w = x, ∂a/∂x = w</li>
+        <li>∂L/∂w = 2b · x ✓</li>
+        <li>∂L/∂x = 2b · w ✓</li>
+        <li>∂L/∂bias = 2b ✓</li>
+      </ol>
+      <div class="hint">💡 모든 단계가 "지역 미분 × 흘러온 grad". GPU 병렬화에 최적.</div>
+    </div>
+    <div class="plot-box" id="cgBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>leaf vs non-leaf 텐서</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li><strong>Leaf</strong>: 사용자가 만든 텐서 (입력, 파라미터). <code>.grad</code> 보존.</li>
+        <li><strong>Non-leaf</strong>: 다른 텐서로 계산된 중간값. <code>.grad</code> = None (기본).</li>
+        <li>중간 grad 필요하면 <code>x.retain_grad()</code></li>
+      </ul>
+      <div class="formula">x = torch.tensor(2.0, requires_grad=True)   # leaf
+y = x * 3                                     # non-leaf
+z = y ** 2; z.backward()
+print(x.grad)   # 12.0  ✓
+print(y.grad)   # None  (기본)
+y.retain_grad()  # 다음 backward부턴 보존</div>
+      <p class="small-note">💡 메모리 절약 설계 — 대부분 중간값은 backward 후 폐기.</p>
+    </div>
+    <div class="plot-box" id="leafBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>grad 누적 함정</h2>
+  <div class="two-col">
+    <div>
+      <p>backward 호출마다 <code>.grad</code>를 <strong>+=</strong> 누적. <strong>매 step zero_grad 필수</strong>.</p>
+      <div class="formula">for x, y in loader:
+    optimizer.zero_grad()   # ← 잊지 말기
+    loss = loss_fn(model(x), y)
+    loss.backward()
+    optimizer.step()</div>
+      <div class="controls">
+        <label>backward 호출 횟수 = <input type="range" id="acN" min="1" max="6" step="1" value="3"><span class="val-pill" id="acNV">3</span></label>
+        <label>zero_grad 호출? <input type="checkbox" id="acZ"></label>
+        <p>x.grad = <span class="val-pill grad" id="acG">9</span></p>
+      </div>
+      <p class="small-note">💡 누적 디자인은 일부러 — gradient accumulation으로 큰 배치 흉내 가능.</p>
+    </div>
+    <div class="plot-box" id="acBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>retain_graph: 두 번 backward</h2>
+  <div class="two-col">
+    <div>
+      <p>기본적으로 <code>backward()</code>는 그래프를 지움(메모리 절약). 같은 그래프를 두 번 쓰려면:</p>
+      <div class="formula">loss1.backward(retain_graph=True)
+loss2.backward()   # 같은 그래프 재사용</div>
+      <ul>
+        <li>GAN, multi-task 등에서 필요</li>
+        <li>안 쓰면 <span class="chip red">RuntimeError: backward through the graph a second time</span></li>
+      </ul>
+      <div class="hint">💡 99% 케이스는 <code>loss = loss1 + loss2</code>로 합쳐서 한 번 backward — retain_graph 안 써도 됨.</div>
+    </div>
+    <div class="plot-box" id="rgrBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>no_grad / detach: 추적 끄기</h2>
+  <div class="two-col">
+    <div>
+      <p>추론·평가 시 grad 불필요. 추적 끄면 <strong>메모리 30~50% 절감</strong>.</p>
+      <div class="formula">with torch.no_grad():
+    pred = model(x)        # 그래프 안 만듦
+
+y = (x * 2).detach()       # 이 노드부터 grad 끊김</div>
+      <ul>
+        <li><span class="chip blue">no_grad</span> — context 안 모든 연산</li>
+        <li><span class="chip orange">detach()</span> — 특정 텐서만 분리</li>
+        <li><span class="chip green">eval()</span> — Dropout/BN 모드 변경 (no_grad와 다름!)</li>
+      </ul>
+      <p class="small-note">💡 추론 시 둘 다 써야: <code>model.eval(); with torch.no_grad():</code></p>
+    </div>
+    <div class="plot-box" id="ngBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>실전 디버깅: grad가 None일 때</h2>
+  <table>
+    <thead><tr><th>증상</th><th>원인</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>x.grad == None</td><td>backward 안 호출</td><td>loss.backward() 추가</td></tr>
+      <tr><td>x.grad == None</td><td>requires_grad=False</td><td>.requires_grad_(True)</td></tr>
+      <tr><td>x.grad == None</td><td>non-leaf 텐서</td><td>x.retain_grad()</td></tr>
+      <tr><td>x.grad == 0</td><td>그래프 끊김 (detach 등)</td><td>중간에 detach 없는지 확인</td></tr>
+      <tr><td>RuntimeError: leaf inplace</td><td>x += 1 같은 inplace</td><td>x = x + 1</td></tr>
+      <tr><td>backward 두 번 오류</td><td>그래프 free</td><td>retain_graph=True</td></tr>
+    </tbody>
+  </table>
+  <p class="small-note">💡 이 표 외우면 PyTorch grad 디버깅 90% 끝.</p>
+</section>
+
+<section class="slide">
+  <h2>autograd 그래프 직접 보기</h2>
+  <div class="two-col">
+    <div>
+      <p>모든 텐서에 <code>.grad_fn</code>이 붙음. 어떤 연산으로 만들어졌는지 추적 가능.</p>
+      <div class="formula">x = torch.tensor(2.0, requires_grad=True)
+y = x ** 2
+print(y.grad_fn)              # PowBackward0
+print(y.grad_fn.next_functions)
+# ((AccumulateGrad, 0), )</div>
+      <ul>
+        <li><strong>PowBackward0</strong> — pow 연산의 backward 함수</li>
+        <li><strong>AccumulateGrad</strong> — leaf의 .grad에 += 하는 노드</li>
+        <li>이게 모여 거대한 DAG</li>
+      </ul>
+      <div class="hint">💡 디버깅 도구: <code>torchviz.make_dot(loss).render()</code></div>
+    </div>
+    <div class="plot-box" id="gfBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Higher-order grad (2차 미분)</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">x = torch.tensor(2.0, requires_grad=True)
+y = x**3
+g1 = torch.autograd.grad(y, x, create_graph=True)[0]   # 3x² = 12
+g2 = torch.autograd.grad(g1, x)[0]                      # 6x = 12</div>
+      <ul>
+        <li>2차 미분 = Hessian — 메타러닝, MAML, 적대적 공격</li>
+        <li>비용 ~2배. 강력함</li>
+      </ul>
+      <p class="small-note">💡 고차 미분 덕에 <strong>differentiable physics, neural ODE</strong> 분야 가능.</p>
+    </div>
+    <div class="plot-box" id="hoBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>정리: Autograd 6가지</h2>
+  <div class="three-col" style="flex:1; min-height:0;">
+    <div class="card"><h3>1. requires_grad</h3><p>추적 스위치.</p></div>
+    <div class="card"><h3>2. backward()</h3><p>거꾸로 훑어 grad 채움.</p></div>
+    <div class="card"><h3>3. zero_grad</h3><p>매 step 호출.</p></div>
+  </div>
+  <div class="three-col" style="margin-top:14px; flex:1;">
+    <div class="card"><h3>4. detach/no_grad</h3><p>추론 시 메모리 절약.</p></div>
+    <div class="card"><h3>5. retain_grad/graph</h3><p>중간값/그래프 유지.</p></div>
+    <div class="card"><h3>6. higher-order</h3><p>create_graph=True로 2차.</p></div>
+  </div>
+</section>
+
+<section class="slide title">
+  <h1>다음: 04. nn.Module 🧱</h1>
+  <div class="subtitle">Linear 레이어와 모듈 컴포지션</div>
+</section>
+
+</div></div>
+
+<div class="navbar"><button id="prevBtn">←</button>
+<div class="progress"><div class="bar" id="progBar"></div></div>
+<div class="pageinfo" id="pageInfo">1 / N</div>
+<button id="nextBtn">→</button></div>
+
+<script>
+(function(){
+const SW=1280,SH=720, st=document.getElementById('stage'), wp=document.getElementById('slideWrap');
+function fit(){ wp.style.transform=`scale(${Math.min((st.clientWidth-24)/SW,(st.clientHeight-24)/SH)})`; }
+window.addEventListener('resize',fit); fit();
+const sl=document.querySelectorAll('.slide'); let _i=0;
+function go(n){_i=Math.max(0,Math.min(sl.length-1,n));sl.forEach((s,k)=>s.classList.toggle('active',k===_i));
+  document.getElementById('pageInfo').textContent=(_i+1)+' / '+sl.length;
+  document.getElementById('progBar').style.width=((_i+1)/sl.length*100)+'%';
+  document.getElementById('prevBtn').disabled=_i===0; document.getElementById('nextBtn').disabled=_i===sl.length-1;
+  if(history.replaceState) history.replaceState(null,'','#'+(_i+1));}
+document.getElementById('prevBtn').onclick=()=>go(_i-1); document.getElementById('nextBtn').onclick=()=>go(_i+1);
+document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea')) return;
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();go(_i+1);}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(_i-1);}
+  else if(e.key==='Home') go(0); else if(e.key==='End') go(sl.length-1);});
+const _h=parseInt(location.hash.replace('#',''),10); if(!isNaN(_h)) go(_h-1); else go(0);
+
+function plotSVG({w,h,xMin,xMax,yMin,yMax,curves,dots=[],vlines=[],hlines=[],extras='',title=''}){
+  const PL=38,PR=10,PT=title?22:10,PB=24;
+  const sx=x=>PL+(x-xMin)/(xMax-xMin)*(w-PL-PR);
+  const sy=y=>PT+(1-(y-yMin)/(yMax-yMin))*(h-PT-PB);
+  let ax='';
+  for(let x=Math.ceil(xMin);x<=Math.floor(xMax);x++) ax+=`<line x1="${sx(x)}" y1="${PT}" x2="${sx(x)}" y2="${h-PB}" stroke="#f1f3f5"/>`;
+  for(let y=Math.ceil(yMin);y<=Math.floor(yMax);y++) ax+=`<line x1="${PL}" y1="${sy(y)}" x2="${w-PR}" y2="${sy(y)}" stroke="#f1f3f5"/>`;
+  if(yMin<=0&&yMax>=0) ax+=`<line x1="${PL}" y1="${sy(0)}" x2="${w-PR}" y2="${sy(0)}" stroke="#9aa0a6"/>`;
+  if(xMin<=0&&xMax>=0) ax+=`<line x1="${sx(0)}" y1="${PT}" x2="${sx(0)}" y2="${h-PB}" stroke="#9aa0a6"/>`;
+  let cs='';
+  for(const c of curves){ if(!c||!c.points||c.points.length<2) continue;
+    let d=''; c.points.forEach((p)=>{ const px=sx(p[0]), py=sy(p[1]); if(!isFinite(py)) return;
+      d+=(d.length===0?'M':'L')+px.toFixed(1)+' '+Math.max(PT,Math.min(h-PB,py)).toFixed(1)+' '; });
+    cs+=`<path d="${d}" stroke="${c.color}" stroke-width="${c.width||2}" fill="none" ${c.dash?'stroke-dasharray="'+c.dash+'"':''} opacity="${c.opacity||1}"/>`;
+    if(c.label){ const lp=c.points[c.points.length-1];
+      cs+=`<text x="${sx(lp[0])-4}" y="${sy(lp[1])-4}" font-size="11" font-weight="700" fill="${c.color}" text-anchor="end">${c.label}</text>`; }
+  }
+  let ds=''; for(const d of dots){ ds+=`<circle cx="${sx(d.x)}" cy="${sy(d.y)}" r="${d.r||5}" fill="${d.color||'#ef4444'}"/>`;
+    if(d.label) ds+=`<text x="${sx(d.x)+8}" y="${sy(d.y)-6}" font-size="11" font-weight="700" fill="${d.color||'#ef4444'}">${d.label}</text>`; }
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+    ${title?`<text x="${w/2}" y="14" text-anchor="middle" font-weight="700" font-size="13">${title}</text>`:''}
+    <rect x="${PL}" y="${PT}" width="${w-PL-PR}" height="${h-PT-PB}" fill="#fcfcfc" stroke="#e5e7eb"/>
+    ${ax}${cs}${extras}${ds}</svg>`;
+}
+function linspace(a,b,n){ const r=[]; for(let i=0;i<n;i++) r.push(a+(b-a)*i/(n-1)); return r; }
+
+(function(){const box=document.getElementById('b1'); if(!box) return;
+  const xs=linspace(0.1,4,80);
+  const tr=xs.map(x=>[x,2*x*Math.cos(x*x)]);
+  const num=xs.map(x=>{const h=1e-6;return [x,(Math.sin((x+h)*(x+h))-Math.sin((x-h)*(x-h)))/(2*h)];});
+  box.innerHTML=plotSVG({w:460,h:340,xMin:0,xMax:4,yMin:-8,yMax:8,
+    curves:[{color:"#2b7cff",points:tr,width:3,label:"autograd"},
+            {color:"#ff7043",points:num,width:2,dash:"5,4",label:"numerical"}],
+    title:"d/dx sin(x²)"});
+})();
+
+(function(){const xE=document.getElementById('rgX'),xV=document.getElementById('rgXV');
+  const yV=document.getElementById('rgY'),gV=document.getElementById('rgG'),box=document.getElementById('rgBox');
+  function r(){const x=parseFloat(xE.value);xV.textContent=x.toFixed(1);
+    const y=x*x+2*x+1,g=2*x+2;yV.textContent=y.toFixed(1);gV.textContent=g.toFixed(1);
+    const xs=linspace(-3,5,120);
+    box.innerHTML=plotSVG({w:460,h:340,xMin:-3,xMax:5,yMin:-5,yMax:36,
+      curves:[{color:"#2b7cff",points:xs.map(v=>[v,v*v+2*v+1]),width:3,label:"y"},
+              {color:"#00a86b",points:xs.map(v=>[v,2*v+2]),width:2,dash:"5,4",label:"dy/dx"}],
+      dots:[{x,y,r:6,color:"#ef4444"}],
+      title:`x=${x.toFixed(2)} → y=${y.toFixed(2)}, grad=${g.toFixed(2)}`});}
+  xE.addEventListener('input',r);r();
+})();
+
+(function(){const xE=document.getElementById('dgX'),wE=document.getElementById('dgW'),bE=document.getElementById('dgB');
+  const xV=document.getElementById('dgXV'),wV=document.getElementById('dgWV'),bV=document.getElementById('dgBV');
+  const box=document.getElementById('dgBox');
+  function r(){const x=parseFloat(xE.value),w=parseFloat(wE.value),b=parseFloat(bE.value);
+    xV.textContent=x.toFixed(1);wV.textContent=w.toFixed(1);bV.textContent=b.toFixed(1);
+    const a=x*w,bb=a+b,L=bb*bb;
+    const dLdb=2*bb,dLda=dLdb,dLdx=dLda*w,dLdw=dLda*x,dLdbias=dLdb;
+    box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+      <text x="230" y="20" text-anchor="middle" font-weight="700" font-size="14">forward (검정) / grad (초록)</text>
+      <circle cx="60" cy="80" r="22" fill="#e3f2fd" stroke="#1565c0"/><text x="60" y="84" text-anchor="middle" font-weight="700">x</text>
+      <text x="60" y="118" text-anchor="middle" font-size="11">${x.toFixed(2)}</text>
+      <text x="60" y="132" text-anchor="middle" font-size="11" fill="#00a86b" font-weight="700">∂L/∂x=${dLdx.toFixed(2)}</text>
+      <circle cx="60" cy="200" r="22" fill="#e3f2fd" stroke="#1565c0"/><text x="60" y="204" text-anchor="middle" font-weight="700">w</text>
+      <text x="60" y="238" text-anchor="middle" font-size="11">${w.toFixed(2)}</text>
+      <text x="60" y="252" text-anchor="middle" font-size="11" fill="#00a86b" font-weight="700">∂L/∂w=${dLdw.toFixed(2)}</text>
+      <circle cx="200" cy="140" r="22" fill="#fff3e0" stroke="#e65100"/><text x="200" y="144" text-anchor="middle" font-weight="700">×</text>
+      <text x="200" y="178" text-anchor="middle" font-size="11">a=${a.toFixed(2)}</text>
+      <line x1="82" y1="80" x2="178" y2="140" stroke="#666" marker-end="url(#mka)"/>
+      <line x1="82" y1="200" x2="178" y2="140" stroke="#666" marker-end="url(#mka)"/>
+      <circle cx="60" cy="290" r="22" fill="#e3f2fd" stroke="#1565c0"/><text x="60" y="294" text-anchor="middle" font-weight="700">bias</text>
+      <text x="60" y="324" text-anchor="middle" font-size="10">${b.toFixed(2)} grad=${dLdbias.toFixed(2)}</text>
+      <circle cx="320" cy="200" r="22" fill="#fff3e0" stroke="#e65100"/><text x="320" y="204" text-anchor="middle" font-weight="700">+</text>
+      <text x="320" y="238" text-anchor="middle" font-size="11">b=${bb.toFixed(2)}</text>
+      <line x1="222" y1="140" x2="298" y2="200" stroke="#666" marker-end="url(#mka)"/>
+      <line x1="82" y1="290" x2="298" y2="200" stroke="#666" marker-end="url(#mka)"/>
+      <circle cx="420" cy="140" r="22" fill="#ffebee" stroke="#c62828"/><text x="420" y="144" text-anchor="middle" font-weight="700">L</text>
+      <text x="420" y="178" text-anchor="middle" font-size="11">${L.toFixed(2)}</text>
+      <line x1="342" y1="200" x2="398" y2="140" stroke="#666" marker-end="url(#mka)"/>
+      <defs><marker id="mka" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#666"/></marker></defs>
+    </svg>`;}
+  [xE,wE,bE].forEach(e=>e.addEventListener('input',r));r();
+})();
+
+(function(){const box=document.getElementById('cgBox'); if(!box) return;
+  box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+    <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">backward 단계별 누적</text>
+    <rect x="40" y="50" width="380" height="32" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="230" y="70" text-anchor="middle" font-size="12">step 0 — ∂L/∂L = 1</text>
+    <rect x="40" y="92" width="380" height="32" rx="6" fill="#fff3e0" stroke="#e65100"/>
+    <text x="230" y="112" text-anchor="middle" font-size="12">step 1 — ∂L/∂b = 2b (loss = b²)</text>
+    <rect x="40" y="134" width="380" height="32" rx="6" fill="#fff3e0" stroke="#e65100"/>
+    <text x="230" y="154" text-anchor="middle" font-size="12">step 2 — ∂L/∂a = 2b · 1, ∂L/∂bias = 2b</text>
+    <rect x="40" y="176" width="380" height="32" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+    <text x="230" y="196" text-anchor="middle" font-size="12">step 3 — ∂L/∂w = 2b · x, ∂L/∂x = 2b · w</text>
+    <rect x="40" y="230" width="380" height="60" rx="6" fill="#ede7f6" stroke="#5e35b1"/>
+    <text x="230" y="252" text-anchor="middle" font-size="12" font-weight="700">"지역 미분 × 흘러온 grad" 반복</text>
+    <text x="230" y="272" text-anchor="middle" font-size="11">— 이게 곧 backpropagation</text>
+  </svg>`;
+})();
+
+(function(){const box=document.getElementById('leafBox'); if(!box) return;
+  box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+    <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">텐서 계보</text>
+    <circle cx="80" cy="100" r="28" fill="#e3f2fd" stroke="#1565c0" stroke-width="3"/>
+    <text x="80" y="105" text-anchor="middle" font-weight="700">x (leaf)</text>
+    <text x="80" y="148" text-anchor="middle" font-size="11" fill="#1565c0">.grad ✓</text>
+    <circle cx="230" cy="100" r="28" fill="#fff3e0" stroke="#e65100" stroke-dasharray="4,3"/>
+    <text x="230" y="105" text-anchor="middle" font-weight="700">y = x*3</text>
+    <text x="230" y="148" text-anchor="middle" font-size="11" fill="#e65100">.grad = None</text>
+    <circle cx="380" cy="100" r="28" fill="#ffebee" stroke="#c62828"/>
+    <text x="380" y="105" text-anchor="middle" font-weight="700">z = y²</text>
+    <text x="380" y="148" text-anchor="middle" font-size="11">loss</text>
+    <line x1="108" y1="100" x2="202" y2="100" stroke="#666" marker-end="url(#mkb)"/>
+    <line x1="258" y1="100" x2="352" y2="100" stroke="#666" marker-end="url(#mkb)"/>
+    <defs><marker id="mkb" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#666"/></marker></defs>
+    <text x="230" y="220" text-anchor="middle" font-size="12" fill="#6b7280">중간 텐서 grad는 메모리 절약 위해 폐기</text>
+    <text x="230" y="240" text-anchor="middle" font-size="12" fill="#6b7280">필요하면 y.retain_grad()</text>
+    <rect x="40" y="270" width="380" height="44" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+    <text x="230" y="290" text-anchor="middle" font-size="12" font-weight="700">파라미터(nn.Parameter) = 항상 leaf, requires_grad=True</text>
+    <text x="230" y="306" text-anchor="middle" font-size="11">→ optimizer가 .grad만 보면 됨</text>
+  </svg>`;
+})();
+
+(function(){const nE=document.getElementById('acN'),nV=document.getElementById('acNV');
+  const zE=document.getElementById('acZ'),gV=document.getElementById('acG'),box=document.getElementById('acBox');
+  function r(){const n=parseInt(nE.value);nV.textContent=n;
+    const z=zE.checked;const grad=z?3:3*n;gV.textContent=grad;
+    let bars='';let acc=0;
+    for(let k=0;k<n;k++){acc=z?3:acc+3;
+      bars+=`<rect x="${60+k*60}" y="${260-acc*8}" width="40" height="${acc*8}" fill="#2b7cff"/>`;
+      bars+=`<text x="${60+k*60+20}" y="${250-acc*8}" text-anchor="middle" font-size="11" font-weight="700">${acc}</text>`;
+      bars+=`<text x="${60+k*60+20}" y="278" text-anchor="middle" font-size="11" fill="#6b7280">step ${k+1}</text>`;}
+    box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+      <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">x.grad after each backward (loss=3x, x=2)</text>
+      <line x1="40" y1="260" x2="440" y2="260" stroke="#9aa0a6"/>
+      ${bars}
+      <text x="230" y="320" text-anchor="middle" font-size="12" font-weight="700" fill="${z?'#00a86b':'#d93025'}">${z?'zero_grad ✓ → 정상':'zero_grad 빠짐 → grad 폭주!'}</text>
+    </svg>`;}
+  nE.addEventListener('input',r);zE.addEventListener('change',r);r();
+})();
+
+(function(){const box=document.getElementById('rgrBox'); if(!box) return;
+  box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+    <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">backward 후 그래프 운명</text>
+    <rect x="40" y="60" width="380" height="60" rx="6" fill="#ffebee" stroke="#c62828"/>
+    <text x="230" y="84" text-anchor="middle" font-size="13" font-weight="700">기본: backward() 후 그래프 free</text>
+    <text x="230" y="106" text-anchor="middle" font-size="11" fill="#d93025">→ 두 번째 backward: RuntimeError</text>
+    <rect x="40" y="140" width="380" height="60" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+    <text x="230" y="164" text-anchor="middle" font-size="13" font-weight="700">retain_graph=True → 그래프 유지</text>
+    <text x="230" y="186" text-anchor="middle" font-size="11">→ 같은 그래프로 또 backward 가능</text>
+    <rect x="40" y="220" width="380" height="60" rx="6" fill="#fff3e0" stroke="#e65100"/>
+    <text x="230" y="244" text-anchor="middle" font-size="13" font-weight="700">실전 팁: loss = loss1 + loss2</text>
+    <text x="230" y="266" text-anchor="middle" font-size="11" fill="#6b7280">한 번에 backward → retain_graph 불필요</text>
+  </svg>`;
+})();
+
+(function(){const box=document.getElementById('ngBox'); if(!box) return;
+  box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+    <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">BERT-base 추론 메모리</text>
+    <rect x="60" y="80" width="300" height="40" fill="#d93025"/>
+    <text x="370" y="106" font-size="12" font-weight="700">학습 모드</text>
+    <rect x="60" y="140" width="135" height="40" fill="#00a86b"/>
+    <text x="200" y="166" font-size="12" font-weight="700" fill="#fff">no_grad</text>
+    <text x="60" y="220" font-size="12" fill="#6b7280">동일 모델 추론:</text>
+    <text x="60" y="240" font-size="12">• 학습 모드: ~2.4 GB (활성값 + 그래프)</text>
+    <text x="60" y="258" font-size="12">• no_grad: ~1.1 GB (활성값만)</text>
+    <text x="60" y="280" font-size="12" fill="#00a86b" font-weight="700">→ 절반 이하로 감소!</text>
+    <text x="60" y="310" font-size="11" fill="#6b7280">eval()은 dropout/BN만 끄고 메모리는 안 바뀜.</text>
+  </svg>`;
+})();
+
+(function(){const box=document.getElementById('gfBox'); if(!box) return;
+  box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+    <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">y.grad_fn 트리</text>
+    <rect x="170" y="50" width="120" height="36" rx="6" fill="#fff3e0" stroke="#e65100"/>
+    <text x="230" y="73" text-anchor="middle" font-weight="700" font-size="12">PowBackward0</text>
+    <line x1="230" y1="86" x2="230" y2="120" stroke="#666" marker-end="url(#mkc)"/>
+    <rect x="160" y="120" width="140" height="36" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="230" y="138" text-anchor="middle" font-weight="700" font-size="12">AccumulateGrad</text>
+    <text x="230" y="153" text-anchor="middle" font-size="10">→ x.grad += ...</text>
+    <defs><marker id="mkc" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#666"/></marker></defs>
+    <text x="230" y="200" text-anchor="middle" font-size="12">DAG 노드 — 각자의 backward 보유</text>
+    <rect x="40" y="230" width="380" height="60" rx="6" fill="#ede7f6" stroke="#5e35b1"/>
+    <text x="230" y="252" text-anchor="middle" font-size="12" font-weight="700">실전: torchviz.make_dot(loss).render()</text>
+    <text x="230" y="272" text-anchor="middle" font-size="11">대형 모델은 수십만 개 노드</text>
+  </svg>`;
+})();
+
+(function(){const box=document.getElementById('hoBox'); if(!box) return;
+  const xs=linspace(-2,2,80);
+  box.innerHTML=plotSVG({w:460,h:340,xMin:-2,xMax:2,yMin:-8,yMax:12,
+    curves:[{color:"#2b7cff",points:xs.map(x=>[x,x*x*x]),width:3,label:"f=x³"},
+            {color:"#ff7043",points:xs.map(x=>[x,3*x*x]),width:2,dash:"5,4",label:"f'=3x²"},
+            {color:"#00a86b",points:xs.map(x=>[x,6*x]),width:2,dash:"2,3",label:"f''=6x"}],
+    title:"PyTorch는 1·2·3차 미분 모두 자동"});
+})();
+})();
+</script></body></html>

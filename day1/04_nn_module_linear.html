@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8" />
+<title>04. nn.Module + Linear</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+:root { --accent:#2b7cff; --accent-2:#ff7043; --ok:#00a86b; --warn:#d93025; --muted:#6b7280; --bg:#ffffff; --ink:#1f2937; }
+*{box-sizing:border-box;} html,body{margin:0;padding:0;background:#e8eaed;color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",-apple-system,sans-serif;-webkit-font-smoothing:antialiased;height:100vh;overflow:hidden;}
+.stage{position:fixed;top:54px;left:0;right:0;bottom:0;overflow:hidden;}
+.slide-wrap{width:1280px;height:720px;transform-origin:top left;position:absolute;top:0;left:0;}
+.slide{position:absolute;inset:0;background:#fff;border-radius:4px;box-shadow:0 10px 30px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08);padding:48px 56px;display:none;flex-direction:column;overflow:hidden;}
+.slide.active{display:flex;animation:fade .25s ease;} @keyframes fade{from{opacity:0;}to{opacity:1;}}
+h1{font-size:48px;margin:0 0 12px;font-weight:800;letter-spacing:-.02em;}
+h2{font-size:30px;margin:0 0 12px;font-weight:800;letter-spacing:-.01em;}
+h3{font-size:18px;color:var(--accent);margin:4px 0 10px;font-weight:700;}
+p,li{font-size:16px;line-height:1.55;margin:6px 0;} ul{margin:6px 0;padding-left:22px;}
+code{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:.9em;}
+.slide.title{align-items:center;justify-content:center;text-align:center;} .slide.title h1{font-size:64px;}
+.subtitle{color:var(--muted);font-size:20px;margin-top:10px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:stretch;flex:1;min-height:0;}
+.two-col>*{min-width:0;min-height:0;display:flex;flex-direction:column;justify-content:center;}
+.two-col>.plot-box{justify-content:flex-start;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;align-items:stretch;}
+.card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;} .card h3{margin-top:0;}
+.pros{color:var(--ok);} .cons{color:var(--warn);}
+.formula{background:#eef3ff;border-left:4px solid var(--accent);padding:10px 14px;border-radius:6px;font-family:"JetBrains Mono","Menlo",monospace;font-size:14px;margin:10px 0;white-space:pre-wrap;}
+.chip{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;margin-right:6px;}
+.chip.blue{background:#e3f2fd;color:#1565c0;} .chip.orange{background:#fff3e0;color:#e65100;}
+.chip.green{background:#e8f5e9;color:#2e7d32;} .chip.red{background:#ffebee;color:#c62828;} .chip.purple{background:#ede7f6;color:#5e35b1;}
+.analogy{background:linear-gradient(135deg,#eef3ff,#fff);border-radius:12px;padding:14px 18px;margin:8px 0;} .analogy strong{color:var(--accent);}
+.plot-box{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;overflow:hidden;display:flex;flex-direction:column;}
+.plot-box svg{display:block;width:100%;height:auto;flex:1;min-height:0;max-height:420px;}
+.small-note{color:var(--muted);font-size:13px;}
+table{width:100%;border-collapse:collapse;font-size:14px;} th,td{border:1px solid #e5e7eb;padding:8px 12px;text-align:left;} th{background:#f3f4f6;}
+.controls{margin-top:8px;font-size:14px;} .controls label{display:flex;align-items:center;gap:10px;margin:6px 0;}
+.controls input[type=range]{flex:1;accent-color:var(--accent);}
+.val-pill{display:inline-block;min-width:56px;padding:2px 10px;border-radius:999px;background:#eef3ff;color:var(--accent);font-family:"JetBrains Mono",monospace;font-weight:700;text-align:center;font-size:13px;}
+.val-pill.out{background:#fff3e0;color:#e65100;} .val-pill.grad{background:#e8f5e9;color:#2e7d32;}
+.hint{display:inline-block;background:#fffde7;border:1px dashed #fbc02d;border-radius:6px;padding:6px 12px;font-size:13px;color:#6b5b00;margin-top:8px;}
+.btn{padding:7px 14px;border-radius:6px;background:var(--accent);color:#fff;border:none;font-weight:600;font-size:13px;cursor:pointer;margin:3px;}
+.navbar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.94);border:1px solid #dadce0;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.08);display:flex;align-items:center;gap:12px;padding:6px 14px;z-index:100;}
+.navbar button{width:32px;height:32px;border-radius:999px;border:none;background:var(--accent);color:#fff;font-size:15px;cursor:pointer;}
+.navbar button:disabled{background:#e5e7eb;color:#999;cursor:not-allowed;}
+.navbar .pageinfo{font-weight:700;color:var(--muted);min-width:56px;text-align:center;font-size:13px;}
+.navbar .progress{width:140px;height:5px;background:#e5e7eb;border-radius:999px;overflow:hidden;}
+.navbar .progress .bar{height:100%;background:var(--accent);transition:width .3s;}
+.topnav{position:fixed;top:0;left:0;right:0;height:54px;background:#fff;border-bottom:1px solid #dadce0;padding:0 24px;display:flex;align-items:center;gap:14px;z-index:100;}
+.topnav .title{font-weight:700;font-size:16px;} .topnav .hint-key{color:var(--muted);font-size:13px;}
+</style></head><body>
+<div class="topnav"><div class="title">04. nn.Module + Linear 🧱</div><div class="hint-key">← → 방향키 / 슬라이더로 체험</div></div>
+<div class="stage" id="stage"><div class="slide-wrap" id="slideWrap">
+
+<section class="slide title active">
+  <h1>nn.Module + Linear</h1>
+  <div class="subtitle">파라미터를 묶고 forward를 정의하는 표준</div>
+  <svg width="600" height="180" viewBox="0 0 600 180" style="margin-top:30px;">
+    <rect x="50" y="60" width="120" height="60" rx="10" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="110" y="95" text-anchor="middle" font-weight="700">Input x</text>
+    <rect x="240" y="60" width="120" height="60" rx="10" fill="#fff3e0" stroke="#e65100"/>
+    <text x="300" y="88" text-anchor="middle" font-weight="700">Linear</text>
+    <text x="300" y="108" text-anchor="middle" font-size="12">y = xWᵀ + b</text>
+    <rect x="430" y="60" width="120" height="60" rx="10" fill="#e8f5e9" stroke="#2e7d32"/>
+    <text x="490" y="95" text-anchor="middle" font-weight="700">Output y</text>
+  </svg>
+</section>
+
+<section class="slide">
+  <h2>왜 모듈화가 필요한가</h2>
+  <div class="two-col">
+    <div>
+      <div class="analogy"><strong>비유: 레고 블록</strong>. 각 모듈이 자기 파라미터/forward를 알면 전체가 자동 학습.</div>
+      <ul>
+        <li>파라미터 모으기 — <code>model.parameters()</code> 한 번에</li>
+        <li>state 저장/로드 — <code>state_dict()</code></li>
+        <li>device 이동 — <code>model.to('cuda')</code></li>
+        <li>학습/평가 모드 — <code>train() / eval()</code></li>
+      </ul>
+      <div class="hint">💡 nn.Module 안 쓰면 위 편의 0%.</div>
+    </div>
+    <div class="plot-box" id="b1"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Linear: y = xWᵀ + b</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">x: (N, D1)
+W: (D2, D1)   ← PyTorch 관행
+b: (D2,)
+y = x @ W.T + b   shape (N, D2)</div>
+      <p>총 파라미터 = D1·D2 + D2 = D2·(D1+1)</p>
+      <div class="controls">
+        <label>입력 D1 = <input type="range" id="d1" min="1" max="32" step="1" value="4"><span class="val-pill" id="d1V">4</span></label>
+        <label>출력 D2 = <input type="range" id="d2" min="1" max="32" step="1" value="3"><span class="val-pill" id="d2V">3</span></label>
+        <p>파라미터 수: <span class="val-pill out" id="pn">15</span></p>
+      </div>
+    </div>
+    <div class="plot-box" id="lnBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>weight/bias 슬라이더로 직선</h2>
+  <div class="two-col">
+    <div>
+      <p>1D Linear: <code>y = w·x + b</code>. 학습 = w, b 조절해 데이터에 맞추기.</p>
+      <div class="controls">
+        <label>w = <input type="range" id="lw" min="-3" max="3" step="0.1" value="1"><span class="val-pill" id="lwV">1.0</span></label>
+        <label>b = <input type="range" id="lb" min="-3" max="3" step="0.1" value="0"><span class="val-pill" id="lbV">0.0</span></label>
+        <p>RMSE: <span class="val-pill grad" id="lr">1.23</span></p>
+      </div>
+      <ul>
+        <li>w = 기울기, b = y절편</li>
+        <li>nn.Linear 1개 → 직선 회귀까지</li>
+      </ul>
+      <p class="small-note">💡 비선형(활성화) 없으면 층을 쌓아도 결국 직선.</p>
+    </div>
+    <div class="plot-box" id="lpBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>nn.Module 구조</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">class MyMLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(4, 16)
+        self.fc2 = nn.Linear(16, 3)
+    def forward(self, x):
+        h = torch.relu(self.fc1(x))
+        return self.fc2(h)
+
+m = MyMLP()
+out = m(torch.randn(2, 4))   # m(x) → m.forward(x)</div>
+      <ul>
+        <li><code>__init__</code>: sub-module 등록</li>
+        <li><code>forward</code>: 텐서 흐름 정의</li>
+        <li><code>m(x)</code>는 자동으로 <code>m.forward(x)</code> 호출</li>
+      </ul>
+    </div>
+    <div class="plot-box" id="mBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>parameters / named_parameters / state_dict</h2>
+  <div class="three-col" style="flex:1;">
+    <div class="card"><h3>parameters()</h3>
+      <div class="formula">for p in m.parameters():
+    print(p.shape)</div><p>옵티마이저에 넘김.</p></div>
+    <div class="card"><h3>named_parameters()</h3>
+      <div class="formula">for n, p in m.named_parameters():
+    print(n, p.shape)</div><p>특정 파라미터 freeze.</p></div>
+    <div class="card"><h3>state_dict()</h3>
+      <div class="formula">torch.save(m.state_dict(), 'm.pt')
+m.load_state_dict(torch.load('m.pt'))</div><p>저장/로드.</p></div>
+  </div>
+  <p class="small-note" style="margin-top:14px;">💡 Buffer(학습 안 되는 상태)는 <code>register_buffer</code> — BN의 running_mean이 대표.</p>
+</section>
+
+<section class="slide">
+  <h2>Sequential vs Custom Module</h2>
+  <div class="two-col">
+    <div>
+      <h3>nn.Sequential (간단)</h3>
+      <div class="formula">m = nn.Sequential(
+    nn.Linear(4, 16),
+    nn.ReLU(),
+    nn.Linear(16, 3),
+)</div>
+      <p class="pros">✓ 짧고 명확</p><p class="cons">✗ 분기/skip 불가</p>
+    </div>
+    <div>
+      <h3>Custom subclass</h3>
+      <div class="formula">class Res(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.f = nn.Linear(4,4)
+    def forward(self, x):
+        return x + self.f(x)   # ← skip!</div>
+      <p class="pros">✓ 자유로운 흐름</p>
+    </div>
+  </div>
+  <p class="small-note" style="margin-top:14px;">💡 Transformer/ResNet 등 대부분 Custom 형태.</p>
+</section>
+
+<section class="slide">
+  <h2>가중치 초기화</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li><strong>Xavier (Glorot)</strong>: Var = 1/fan_in — sigmoid/tanh</li>
+        <li><strong>He (Kaiming)</strong>: Var = 2/fan_in — ReLU</li>
+        <li><strong>Uniform/Normal</strong>: 단순 랜덤</li>
+      </ul>
+      <div class="controls">
+        <label>방법:
+          <select id="initSel">
+            <option value="xavier">Xavier (1/n)</option>
+            <option value="he" selected>He (2/n)</option>
+            <option value="uniform">Uniform(-1,1)</option>
+            <option value="normal01">Normal(0,1)</option>
+            <option value="zero">Zeros (실수!)</option>
+          </select>
+        </label>
+        <label>fan_in = <input type="range" id="initFi" min="4" max="256" step="4" value="64"><span class="val-pill" id="initFiV">64</span></label>
+        <p>가중치 표준편차: <span class="val-pill grad" id="initStd">0.18</span></p>
+      </div>
+    </div>
+    <div class="plot-box" id="initBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>왜 He가 ReLU에 맞나?</h2>
+  <div class="two-col">
+    <div>
+      <p>ReLU는 절반이 0 → 출력 분산이 절반으로. 입력 분산을 <strong>2배</strong> 키워야 출력 분산 보존.</p>
+      <div class="formula">Var(W) = 2 / fan_in   # He
+Var(W) = 1 / fan_in   # Xavier</div>
+      <ul>
+        <li>ReLU + Xavier → 깊을수록 활성값 작아짐 (vanishing)</li>
+        <li>ReLU + He → 안정 — 100층 ResNet도 학습</li>
+        <li><span class="chip red">Zero init</span>은 모든 뉴런 동일 학습 → 망함</li>
+      </ul>
+      <div class="hint">💡 ResNet 논문: "초기화 하나로 학습률 0.1까지 가능"</div>
+    </div>
+    <div class="plot-box" id="heBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Composition: 모듈 안의 모듈</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">class Net(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.blocks = nn.ModuleList(
+            [Block(64) for _ in range(4)])
+    def forward(self, x):
+        for b in self.blocks: x = b(x)
+        return x</div>
+      <ul>
+        <li><code>nn.ModuleList</code> — list처럼, 자동 등록</li>
+        <li><code>nn.ModuleDict</code> — dict 버전</li>
+        <li>일반 list → 파라미터 등록 안 됨!</li>
+      </ul>
+    </div>
+    <div class="plot-box" id="cBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>실전: MNIST 분류기</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">class Classifier(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(784, 128), nn.ReLU(),
+            nn.Linear(128, 128), nn.ReLU(),
+            nn.Linear(128, 10),
+        )
+    def forward(self, x): return self.net(x)</div>
+      <p>총 ~118K 파라미터. MacBook 1분이면 학습.</p>
+      <p class="small-note">💡 다음 모듈에서 이 모델로 MNIST 학습.</p>
+    </div>
+    <div class="plot-box" id="cfBox"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>흔한 실수</h2>
+  <div class="three-col" style="flex:1;">
+    <div class="card"><h3>1. super 빼먹음</h3><p class="cons">→ AttributeError</p></div>
+    <div class="card"><h3>2. 일반 list로 layers</h3><p class="cons">→ ModuleList 써야 함</p></div>
+    <div class="card"><h3>3. forward에 inplace</h3><p class="cons">→ x = x.relu()</p></div>
+  </div>
+  <div class="three-col" style="margin-top:14px; flex:1;">
+    <div class="card"><h3>4. m.forward(x) 직접 호출</h3><p>hooks 안 불림. 항상 m(x).</p></div>
+    <div class="card"><h3>5. eval() 안 부르고 추론</h3><p>Dropout/BN 학습 모드.</p></div>
+    <div class="card"><h3>6. .to(device) 순서</h3><p>모델 먼저, optimizer 나중.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>정리</h2>
+  <div class="three-col" style="flex:1;">
+    <div class="card"><h3>nn.Module</h3><p>__init__ 등록, forward 정의, m(x) 호출.</p></div>
+    <div class="card"><h3>Linear</h3><p>y = xWᵀ + b. 모든 신경망의 기본.</p></div>
+    <div class="card"><h3>Init</h3><p>ReLU엔 He, sigmoid엔 Xavier.</p></div>
+  </div>
+</section>
+
+<section class="slide title">
+  <h1>다음: 05. Loss 함수</h1>
+  <div class="subtitle">MSE · CrossEntropy · BCE</div>
+</section>
+
+</div></div>
+<div class="navbar"><button id="prevBtn">←</button><div class="progress"><div class="bar" id="progBar"></div></div><div class="pageinfo" id="pageInfo">1/N</div><button id="nextBtn">→</button></div>
+
+<script>
+(function(){
+const SW=1280,SH=720, st=document.getElementById('stage'), wp=document.getElementById('slideWrap');
+function fit(){ wp.style.transform=`scale(${Math.min((st.clientWidth-24)/SW,(st.clientHeight-24)/SH)})`; }
+window.addEventListener('resize',fit); fit();
+const sl=document.querySelectorAll('.slide'); let _i=0;
+function go(n){_i=Math.max(0,Math.min(sl.length-1,n));sl.forEach((s,k)=>s.classList.toggle('active',k===_i));
+  document.getElementById('pageInfo').textContent=(_i+1)+' / '+sl.length;
+  document.getElementById('progBar').style.width=((_i+1)/sl.length*100)+'%';
+  document.getElementById('prevBtn').disabled=_i===0; document.getElementById('nextBtn').disabled=_i===sl.length-1;}
+document.getElementById('prevBtn').onclick=()=>go(_i-1); document.getElementById('nextBtn').onclick=()=>go(_i+1);
+document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea')) return;
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();go(_i+1);}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(_i-1);}});
+const _h=parseInt(location.hash.replace('#',''),10); if(!isNaN(_h)) go(_h-1); else go(0);
+
+function plotSVG({w,h,xMin,xMax,yMin,yMax,curves,dots=[],title=''}){
+  const PL=38,PR=10,PT=title?22:10,PB=24;
+  const sx=x=>PL+(x-xMin)/(xMax-xMin)*(w-PL-PR);
+  const sy=y=>PT+(1-(y-yMin)/(yMax-yMin))*(h-PT-PB);
+  let ax='';
+  for(let x=Math.ceil(xMin);x<=Math.floor(xMax);x++) ax+=`<line x1="${sx(x)}" y1="${PT}" x2="${sx(x)}" y2="${h-PB}" stroke="#f1f3f5"/>`;
+  for(let y=Math.ceil(yMin);y<=Math.floor(yMax);y++) ax+=`<line x1="${PL}" y1="${sy(y)}" x2="${w-PR}" y2="${sy(y)}" stroke="#f1f3f5"/>`;
+  if(yMin<=0&&yMax>=0) ax+=`<line x1="${PL}" y1="${sy(0)}" x2="${w-PR}" y2="${sy(0)}" stroke="#9aa0a6"/>`;
+  if(xMin<=0&&xMax>=0) ax+=`<line x1="${sx(0)}" y1="${PT}" x2="${sx(0)}" y2="${h-PB}" stroke="#9aa0a6"/>`;
+  let cs='';
+  for(const c of curves){ if(!c||!c.points||c.points.length<2) continue;
+    let d=''; c.points.forEach((p)=>{ const px=sx(p[0]), py=sy(p[1]); if(!isFinite(py)) return;
+      d+=(d.length===0?'M':'L')+px.toFixed(1)+' '+Math.max(PT,Math.min(h-PB,py)).toFixed(1)+' '; });
+    cs+=`<path d="${d}" stroke="${c.color}" stroke-width="${c.width||2}" fill="none" ${c.dash?'stroke-dasharray="'+c.dash+'"':''}/>`;
+    if(c.label){ const lp=c.points[c.points.length-1];
+      cs+=`<text x="${sx(lp[0])-4}" y="${sy(lp[1])-4}" font-size="11" font-weight="700" fill="${c.color}" text-anchor="end">${c.label}</text>`; }
+  }
+  let ds=''; for(const d of dots){ ds+=`<circle cx="${sx(d.x)}" cy="${sy(d.y)}" r="${d.r||5}" fill="${d.color||'#ef4444'}"/>`; }
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+    ${title?`<text x="${w/2}" y="14" text-anchor="middle" font-weight="700" font-size="13">${title}</text>`:''}
+    <rect x="${PL}" y="${PT}" width="${w-PL-PR}" height="${h-PT-PB}" fill="#fcfcfc" stroke="#e5e7eb"/>
+    ${ax}${cs}${ds}</svg>`;
+}
+function linspace(a,b,n){const r=[];for(let i=0;i<n;i++)r.push(a+(b-a)*i/(n-1));return r;}
+
+(function(){const box=document.getElementById('b1'); if(!box) return;
+  box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+    <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">모듈 트리 (BERT 단순화)</text>
+    <rect x="180" y="50" width="100" height="32" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="230" y="71" text-anchor="middle" font-weight="700" font-size="13">BERT</text>
+    <line x1="230" y1="82" x2="100" y2="120" stroke="#666"/>
+    <line x1="230" y1="82" x2="230" y2="120" stroke="#666"/>
+    <line x1="230" y1="82" x2="360" y2="120" stroke="#666"/>
+    <rect x="40" y="120" width="120" height="28" rx="6" fill="#fff3e0" stroke="#e65100"/>
+    <text x="100" y="138" text-anchor="middle" font-size="11">Embedding</text>
+    <rect x="170" y="120" width="120" height="28" rx="6" fill="#fff3e0" stroke="#e65100"/>
+    <text x="230" y="138" text-anchor="middle" font-size="11">Encoder × 12</text>
+    <rect x="300" y="120" width="120" height="28" rx="6" fill="#fff3e0" stroke="#e65100"/>
+    <text x="360" y="138" text-anchor="middle" font-size="11">Pooler</text>
+    <text x="230" y="240" text-anchor="middle" font-size="12" font-weight="700" fill="#5e35b1">model.parameters() → 1억 파라미터 한 번에</text>
+    <text x="230" y="265" text-anchor="middle" font-size="11" fill="#6b7280">model.to('cuda') → 모두 GPU 이동</text>
+  </svg>`;
+})();
+
+(function(){const d1=document.getElementById('d1'),d2=document.getElementById('d2');
+  const v1=document.getElementById('d1V'),v2=document.getElementById('d2V'),pn=document.getElementById('pn');
+  const box=document.getElementById('lnBox');
+  function r(){const a=parseInt(d1.value),b=parseInt(d2.value);
+    v1.textContent=a;v2.textContent=b;pn.textContent=a*b+b;
+    let cells='';const cw=Math.min(28,320/Math.max(a,b)),x0=70,y0=60;
+    for(let i=0;i<b;i++)for(let j=0;j<a;j++)cells+=`<rect x="${x0+j*cw}" y="${y0+i*cw}" width="${cw-2}" height="${cw-2}" fill="#eef3ff" stroke="#2b7cff"/>`;
+    let bcells='';for(let i=0;i<b;i++)bcells+=`<rect x="${x0+a*cw+20}" y="${y0+i*cw}" width="${cw-2}" height="${cw-2}" fill="#fff3e0" stroke="#e65100"/>`;
+    box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+      <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">W (${b}×${a}) + b (${b},)</text>
+      ${cells}${bcells}
+      <text x="230" y="${y0+b*cw+30}" text-anchor="middle" font-size="13" font-weight="700">총 ${a*b+b} 파라미터</text>
+      <text x="230" y="${y0+b*cw+50}" text-anchor="middle" font-size="11" fill="#6b7280">y = x @ W.T + b → (N, ${b})</text>
+    </svg>`;}
+  d1.addEventListener('input',r);d2.addEventListener('input',r);r();
+})();
+
+(function(){const lw=document.getElementById('lw'),lb=document.getElementById('lb');
+  const lwV=document.getElementById('lwV'),lbV=document.getElementById('lbV'),lr=document.getElementById('lr');
+  const box=document.getElementById('lpBox');
+  function r(){const W=parseFloat(lw.value),B=parseFloat(lb.value);
+    lwV.textContent=W.toFixed(1);lbV.textContent=B.toFixed(1);
+    const data=[];let err=0;
+    for(let k=0;k<14;k++){const xx=-2.8+k*0.4;const yt=1.5*xx+0.3+0.6*Math.sin(xx*2);
+      data.push({x:xx,y:yt,color:"#7c4dff"});const e=W*xx+B-yt;err+=e*e;}
+    lr.textContent=Math.sqrt(err/14).toFixed(2);
+    const xs=linspace(-3,3,80);
+    box.innerHTML=plotSVG({w:460,h:340,xMin:-3,xMax:3,yMin:-6,yMax:6,
+      curves:[{color:"#2b7cff",points:xs.map(x=>[x,W*x+B]),width:3,label:`y=${W.toFixed(1)}x+${B.toFixed(1)}`}],
+      dots:data,title:"Linear 1D — 데이터에 직선 맞추기"});}
+  lw.addEventListener('input',r);lb.addEventListener('input',r);r();
+})();
+
+(function(){const box=document.getElementById('mBox'); if(!box) return;
+  box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+    <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">forward 흐름</text>
+    <rect x="60" y="60" width="100" height="36" rx="6" fill="#e3f2fd" stroke="#1565c0"/><text x="110" y="84" text-anchor="middle" font-size="13">x (B,4)</text>
+    <rect x="200" y="60" width="100" height="36" rx="6" fill="#fff3e0" stroke="#e65100"/><text x="250" y="84" text-anchor="middle" font-size="13">fc1 → (B,16)</text>
+    <rect x="340" y="60" width="80" height="36" rx="6" fill="#e8f5e9" stroke="#2e7d32"/><text x="380" y="84" text-anchor="middle" font-size="13">ReLU</text>
+    <rect x="320" y="130" width="120" height="36" rx="6" fill="#fff3e0" stroke="#e65100"/><text x="380" y="154" text-anchor="middle" font-size="13">fc2 → (B,3)</text>
+    <rect x="180" y="200" width="100" height="36" rx="6" fill="#ffebee" stroke="#c62828"/><text x="230" y="224" text-anchor="middle" font-size="13" font-weight="700">logits</text>
+    <text x="230" y="280" text-anchor="middle" font-size="12" fill="#6b7280">m(x) → m.forward(x) 자동 호출</text>
+    <text x="230" y="300" text-anchor="middle" font-size="11" fill="#6b7280">총 4·16+16·3+19 = 131 파라미터</text>
+  </svg>`;
+})();
+
+(function(){const sel=document.getElementById('initSel'),fi=document.getElementById('initFi');
+  const fiV=document.getElementById('initFiV'),sdV=document.getElementById('initStd');
+  const box=document.getElementById('initBox');
+  function std(s,fan){if(s==='xavier')return Math.sqrt(1/fan);if(s==='he')return Math.sqrt(2/fan);
+    if(s==='uniform')return Math.sqrt(1/3);if(s==='normal01')return 1.0;return 0;}
+  function r(){const s=sel.value,fan=parseInt(fi.value);fiV.textContent=fan;
+    const sd=std(s,fan);sdV.textContent=sd.toFixed(3);
+    const N=200,samp=[];
+    for(let k=0;k<N;k++){let v=0;
+      if(s==='zero')v=0;else if(s==='uniform')v=Math.random()*2-1;
+      else{v=Math.sqrt(-2*Math.log(Math.random()))*Math.cos(2*Math.PI*Math.random())*sd;}
+      samp.push(v);}
+    const bins=20,lo=-2,hi=2,counts=new Array(bins).fill(0);
+    samp.forEach(v=>{const k=Math.min(bins-1,Math.max(0,Math.floor((v-lo)/(hi-lo)*bins)));counts[k]++;});
+    const max=Math.max(...counts,1);let bars='';
+    for(let k=0;k<bins;k++){const x=50+k*360/bins;const bw=360/bins-2;const bh=counts[k]/max*220;
+      bars+=`<rect x="${x}" y="${280-bh}" width="${bw}" height="${bh}" fill="#2b7cff"/>`;}
+    box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+      <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">${s} init — 샘플 200</text>
+      ${bars}
+      <line x1="50" y1="280" x2="410" y2="280" stroke="#9aa0a6"/>
+      <text x="50" y="300" font-size="11">-2</text><text x="410" y="300" text-anchor="end" font-size="11">+2</text>
+      <text x="230" y="330" text-anchor="middle" font-size="11" fill="#6b7280">표준편차 ≈ ${sd.toFixed(3)}</text>
+    </svg>`;}
+  sel.addEventListener('change',r);fi.addEventListener('input',r);r();
+})();
+
+(function(){const box=document.getElementById('heBox'); if(!box) return;
+  // Simulate: pass random N(0,1) input through layers; track activation std
+  const layers=20,xs=linspace(0,layers-1,layers);
+  function sim(scale){const stds=[];let s=1;for(let l=0;l<layers;l++){stds.push(s);s=s*scale;}return stds;}
+  const xv=sim(0.85),hv=sim(1.0);
+  box.innerHTML=plotSVG({w:460,h:340,xMin:0,xMax:layers-1,yMin:0,yMax:1.5,
+    curves:[{color:"#d93025",points:xs.map((x,i)=>[x,xv[i]]),width:2.5,label:"Xavier (vanish)"},
+            {color:"#00a86b",points:xs.map((x,i)=>[x,hv[i]]),width:2.5,label:"He (안정)"}],
+    title:"20층 ReLU MLP — 활성값 std"});
+})();
+
+(function(){const box=document.getElementById('cBox'); if(!box) return;
+  box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+    <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">ModuleList vs python list</text>
+    <rect x="40" y="50" width="180" height="220" rx="10" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+    <text x="130" y="76" text-anchor="middle" font-weight="700">ModuleList ✓</text>
+    ${[0,1,2,3].map(k=>`<rect x="60" y="${94+k*32}" width="140" height="24" fill="#fff" stroke="#2e7d32"/><text x="130" y="${110+k*32}" text-anchor="middle" font-size="11">Block ${k}</text>`).join('')}
+    <text x="130" y="252" text-anchor="middle" font-size="11" fill="#2e7d32">parameters() → 모두 포함</text>
+    <rect x="240" y="50" width="180" height="220" rx="10" fill="#ffebee" stroke="#c62828" stroke-width="2"/>
+    <text x="330" y="76" text-anchor="middle" font-weight="700">python list ✗</text>
+    ${[0,1,2,3].map(k=>`<rect x="260" y="${94+k*32}" width="140" height="24" fill="#fff" stroke="#c62828"/><text x="330" y="${110+k*32}" text-anchor="middle" font-size="11">Block ${k}</text>`).join('')}
+    <text x="330" y="252" text-anchor="middle" font-size="11" fill="#c62828">parameters() → 비어있음 ✗</text>
+    <text x="230" y="295" text-anchor="middle" font-size="12" fill="#6b7280">규칙: nn.Module 보관 시 ModuleList/Dict</text>
+  </svg>`;
+})();
+
+(function(){const box=document.getElementById('cfBox'); if(!box) return;
+  box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+    <text x="230" y="22" text-anchor="middle" font-weight="700" font-size="14">MNIST 분류기</text>
+    ${[
+      {y:50,w:400,t:"Flatten: (B,1,28,28) → (B,784)",c:"#e3f2fd",s:"#1565c0"},
+      {y:90,w:380,t:"Linear(784,128) + ReLU",c:"#fff3e0",s:"#e65100"},
+      {y:130,w:360,t:"Linear(128,128) + ReLU",c:"#fff3e0",s:"#e65100"},
+      {y:170,w:340,t:"Linear(128,10) → logits",c:"#ffebee",s:"#c62828"},
+      {y:210,w:320,t:"argmax → 예측 클래스",c:"#e8f5e9",s:"#2e7d32"}
+    ].map(r=>`<rect x="${230-r.w/2}" y="${r.y}" width="${r.w}" height="32" rx="6" fill="${r.c}" stroke="${r.s}"/><text x="230" y="${r.y+21}" text-anchor="middle" font-size="13" font-weight="700">${r.t}</text>`).join('')}
+    <text x="230" y="285" text-anchor="middle" font-size="12" fill="#6b7280">총 ~118K 파라미터</text>
+  </svg>`;
+})();
+})();
+</script></body></html>

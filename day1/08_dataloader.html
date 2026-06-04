@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>08. Dataset & DataLoader - 인터랙티브 가이드</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --accent: #2b7cff;
+      --accent-2: #ff7043;
+      --ok: #00a86b;
+      --warn: #d93025;
+      --muted: #6b7280;
+      --bg: #ffffff;
+      --ink: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #e8eaed; color: var(--ink);
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      height: 100vh; overflow: hidden;
+    }
+
+    .stage {
+      position: fixed;
+      top: 54px; left: 0; right: 0; bottom: 0;
+      overflow: hidden;
+    }
+    .slide-wrap {
+      width: 1280px; height: 720px;
+      transform-origin: top left;
+      position: absolute;
+      top: 0; left: 0;
+    }
+    .slide {
+      position: absolute; inset: 0;
+      background: #ffffff;
+      border-radius: 4px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08);
+      padding: 48px 56px;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .slide.active { display: flex; animation: fade 0.25s ease; }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+    h1 { font-size: 48px; margin: 0 0 12px; font-weight: 800; letter-spacing: -0.02em; }
+    h2 { font-size: 30px; margin: 0 0 12px; font-weight: 800; letter-spacing: -0.01em; }
+    h3 { font-size: 18px; color: var(--accent); margin: 4px 0 10px; font-weight: 700; }
+    p, li { font-size: 16px; line-height: 1.55; margin: 6px 0; }
+    ul { margin: 6px 0; padding-left: 22px; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+    pre { background: #0f172a; color: #e2e8f0; padding: 12px 14px; border-radius: 8px;
+      font-family: "JetBrains Mono", "Menlo", monospace; font-size: 12px; line-height: 1.55; overflow: auto; margin: 8px 0; }
+    pre .k { color: #ff79c6; } pre .s { color: #f1fa8c; } pre .c { color: #6272a4; } pre .n { color: #8be9fd; }
+
+    .slide.title { align-items: center; justify-content: center; text-align: center; }
+    .slide.title h1 { font-size: 64px; }
+    .subtitle { color: var(--muted); font-size: 20px; margin-top: 10px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: stretch; flex: 1; min-height: 0; }
+    .two-col > * { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+    .two-col > .plot-box { justify-content: flex-start; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; align-items: stretch; }
+    .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 22px; display: flex; flex-direction: column; }
+    .card h3 { margin-top: 0; }
+    .pros { color: var(--ok); }
+    .cons { color: var(--warn); }
+    .formula { background: #eef3ff; border-left: 4px solid var(--accent); padding: 10px 14px; border-radius: 6px;
+      font-family: "JetBrains Mono", "Menlo", monospace; font-size: 14px; margin: 10px 0; white-space: pre-wrap; }
+    .chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-right: 6px; }
+    .chip.blue { background: #e3f2fd; color: #1565c0; }
+    .chip.orange { background: #fff3e0; color: #e65100; }
+    .chip.green { background: #e8f5e9; color: #2e7d32; }
+    .chip.red { background: #ffebee; color: #c62828; }
+    .chip.purple { background: #ede7f6; color: #5e35b1; }
+
+    .analogy { background: linear-gradient(135deg, #eef3ff, #fff); border-radius: 12px; padding: 14px 18px; margin: 8px 0; }
+    .analogy strong { color: var(--accent); }
+
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; margin-top: 10px; }
+    .legend span { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+    .legend span.off { opacity: 0.3; }
+    .legend i { display: inline-block; width: 22px; height: 4px; border-radius: 2px; }
+
+    .plot-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; overflow: hidden; display: flex; flex-direction: column; }
+    .plot-box svg { display: block; width: 100%; height: auto; flex: 1; min-height: 0; max-height: 420px; }
+    .small-note { color: var(--muted); font-size: 13px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+    th { background: #f3f4f6; }
+
+    .controls { margin-top: 8px; font-size: 14px; }
+    .controls label { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+    .controls input[type=range] { flex: 1; accent-color: var(--accent); }
+    .val-pill {
+      display: inline-block; min-width: 56px; padding: 2px 10px; border-radius: 999px;
+      background: #eef3ff; color: var(--accent);
+      font-family: "JetBrains Mono", monospace; font-weight: 700; text-align: center; font-size: 13px;
+    }
+    .val-pill.out { background: #fff3e0; color: #e65100; }
+    .val-pill.grad { background: #e8f5e9; color: #2e7d32; }
+    .hint {
+      display: inline-block; background: #fffde7; border: 1px dashed #fbc02d;
+      border-radius: 6px; padding: 6px 12px; font-size: 13px; color: #6b5b00; margin-top: 8px;
+    }
+    .btn {
+      padding: 7px 14px; border-radius: 6px; background: var(--accent); color: #fff;
+      border: none; font-weight: 600; font-size: 13px; cursor: pointer; margin: 3px;
+    }
+    .btn.secondary { background: #e5e7eb; color: var(--ink); }
+    .btn.warn { background: var(--warn); }
+    .btn.ok { background: var(--ok); }
+
+    .dot { fill: #ef4444; }
+    .guide-line { stroke: #ef4444; stroke-dasharray: 3,3; stroke-width: 1; }
+
+    .navbar {
+      position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,0.94);
+      border: 1px solid #dadce0; border-radius: 999px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      display: flex; align-items: center; gap: 12px;
+      padding: 6px 14px; z-index: 100;
+    }
+    .navbar button {
+      width: 32px; height: 32px; border-radius: 999px; border: none;
+      background: var(--accent); color: #fff; font-size: 15px; cursor: pointer;
+    }
+    .navbar button:disabled { background: #e5e7eb; color: #999; cursor: not-allowed; }
+    .navbar .pageinfo { font-weight: 700; color: var(--muted); min-width: 56px; text-align: center; font-size: 13px; }
+    .navbar .progress { width: 140px; height: 5px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+    .navbar .progress .bar { height: 100%; background: var(--accent); transition: width 0.3s; }
+
+    .topnav {
+      position: fixed; top: 0; left: 0; right: 0; height: 54px;
+      background: #ffffff; border-bottom: 1px solid #dadce0;
+      padding: 0 24px;
+      display: flex; align-items: center; gap: 14px; z-index: 100;
+    }
+    .topnav .title { font-weight: 700; font-size: 16px; }
+    .topnav .hint-key { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div class="topnav">
+  <div class="title">08. Dataset &amp; DataLoader 📦</div>
+  <div class="hint-key">← → 방향키 또는 아래 버튼으로 이동</div>
+</div>
+
+<div class="stage" id="stage"><div class="slide-wrap" id="slideWrap">
+
+<!-- 1. Title -->
+<section class="slide title active">
+  <h1>Dataset &amp; DataLoader</h1>
+  <div class="subtitle">데이터를 모델까지 흘려보내는 파이프라인</div>
+  <svg width="700" height="200" viewBox="0 0 700 200" style="margin-top: 30px;">
+    <defs>
+      <marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#9aa0a6"/></marker>
+    </defs>
+    <rect x="20"  y="80" width="120" height="50" rx="10" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="80"  y="100" text-anchor="middle" font-weight="700" font-size="13">디스크 / 메모리</text>
+    <text x="80"  y="118" text-anchor="middle" font-size="11" fill="#6b7280">CSV, 이미지</text>
+
+    <rect x="170" y="80" width="120" height="50" rx="10" fill="#fff3e0" stroke="#e65100"/>
+    <text x="230" y="100" text-anchor="middle" font-weight="700" font-size="13">Dataset</text>
+    <text x="230" y="118" text-anchor="middle" font-size="11" fill="#6b7280">__getitem__</text>
+
+    <rect x="320" y="80" width="120" height="50" rx="10" fill="#ede7f6" stroke="#5e35b1"/>
+    <text x="380" y="100" text-anchor="middle" font-weight="700" font-size="13">Sampler</text>
+    <text x="380" y="118" text-anchor="middle" font-size="11" fill="#6b7280">indices</text>
+
+    <rect x="470" y="80" width="120" height="50" rx="10" fill="#fff3e0" stroke="#e65100"/>
+    <text x="530" y="100" text-anchor="middle" font-weight="700" font-size="13">collate_fn</text>
+    <text x="530" y="118" text-anchor="middle" font-size="11" fill="#6b7280">stack/pad</text>
+
+    <rect x="620" y="80" width="60"  height="50" rx="10" fill="#e8f5e9" stroke="#2e7d32"/>
+    <text x="650" y="100" text-anchor="middle" font-weight="700" font-size="13">Model</text>
+
+    <line x1="140" y1="105" x2="168" y2="105" stroke="#9aa0a6" stroke-width="2" marker-end="url(#ar2)"/>
+    <line x1="290" y1="105" x2="318" y2="105" stroke="#9aa0a6" stroke-width="2" marker-end="url(#ar2)"/>
+    <line x1="440" y1="105" x2="468" y2="105" stroke="#9aa0a6" stroke-width="2" marker-end="url(#ar2)"/>
+    <line x1="590" y1="105" x2="618" y2="105" stroke="#9aa0a6" stroke-width="2" marker-end="url(#ar2)"/>
+    <text x="350" y="160" text-anchor="middle" font-size="13" fill="#6b7280">DataLoader가 위 단계를 묶어서 batch 단위로 반환</text>
+  </svg>
+  <p style="color:var(--muted); margin-top: 24px;">← → 방향키로 이동 · 슬라이더와 토글로 batching/shuffle/num_workers를 직접 체험</p>
+</section>
+
+<!-- 2. Why this matters -->
+<section class="slide">
+  <h2>왜 데이터 파이프라인이 중요한가</h2>
+  <div class="two-col">
+    <div>
+      <div class="analogy">
+        <p><strong>비유:</strong> 식당의 "주방 → 홀" 동선.</p>
+        <p>요리(GPU)가 빨라도 서빙(데이터 로딩)이 느리면 손님(model)은 굶는다. 흔히 <strong>"GPU starvation"</strong>이라 부름.</p>
+      </div>
+      <ul>
+        <li>🎯 GPU 가 데이터를 기다리고 있다면 → 파이프라인 병목</li>
+        <li>⚡ <code>num_workers</code>, <code>pin_memory</code>, <code>prefetch</code>만 잘 잡아도 <strong>2~5× 가속</strong></li>
+        <li>📊 ResNet-50 / ImageNet에서 잘못된 파이프라인이면 GPU util &lt; 30%</li>
+      </ul>
+      <p><strong>오늘 다룰 것:</strong></p>
+      <ul>
+        <li>Dataset 인터페이스 (<code>__len__</code>, <code>__getitem__</code>)</li>
+        <li>DataLoader: batch · shuffle · num_workers · pin_memory</li>
+        <li>Sampler · collate_fn · transform</li>
+        <li>병목 진단과 실용 패턴</li>
+      </ul>
+    </div>
+    <div class="plot-box" id="motiveBox"></div>
+  </div>
+</section>
+
+<!-- 3. Dataset interface -->
+<section class="slide">
+  <h2>Dataset — 두 메소드만 구현</h2>
+  <div class="two-col">
+    <div>
+      <pre><span class="k">from</span> torch.utils.data <span class="k">import</span> Dataset
+
+<span class="k">class</span> MyDataset(Dataset):
+    <span class="k">def</span> __init__(self, data, labels):
+        self.data, self.labels = data, labels
+    <span class="k">def</span> __len__(self):
+        <span class="k">return</span> len(self.data)
+    <span class="k">def</span> __getitem__(self, idx):
+        x = self.data[idx]
+        y = self.labels[idx]
+        <span class="k">return</span> x, y</pre>
+      <ul>
+        <li><strong><code>__len__</code></strong>: 전체 샘플 수 — Sampler가 활용</li>
+        <li><strong><code>__getitem__</code></strong>: 한 샘플 반환. 디스크 read · transform · normalize는 모두 여기서</li>
+        <li>여러 worker가 호출 → side effect 없는 <strong>순수 함수</strong>처럼 작성</li>
+      </ul>
+      <div class="analogy" style="margin-top:6px;">📚 "한 권의 책에서 idx 번째 페이지를 가져다 줘" 같은 인터페이스. 책장 정리(<code>__init__</code>) + 펼치기(<code>__getitem__</code>).</div>
+      <p class="small-note">💡 ImageFolder, TensorDataset, MNIST 등 모든 내장 dataset도 이 두 메소드를 구현한 클래스.</p>
+    </div>
+    <div class="plot-box" id="dsBox"></div>
+  </div>
+</section>
+
+<!-- 4. Map vs Iterable -->
+<section class="slide">
+  <h2>두 종류 — Map-style vs Iterable-style</h2>
+  <div class="two-col">
+    <div class="card">
+      <h3>Map-style (대부분)</h3>
+      <ul>
+        <li><code>__len__</code> + <code>__getitem__</code> 구현</li>
+        <li>인덱스로 임의 접근 → shuffle / random_split 가능</li>
+        <li>전체 메모리에 올릴 수 있는 사이즈</li>
+        <li><span class="chip blue">예시</span> MNIST, CIFAR-10, CSV</li>
+      </ul>
+      <pre style="font-size:11px"><span class="k">class</span> MapDS(Dataset):
+    <span class="k">def</span> __getitem__(self, i): ...
+    <span class="k">def</span> __len__(self): ...</pre>
+    </div>
+    <div class="card">
+      <h3>Iterable-style (대용량 스트림)</h3>
+      <ul>
+        <li><code>__iter__</code>만 구현</li>
+        <li>로그 스트리밍, 매우 큰 코퍼스, S3/HTTP 원격</li>
+        <li>shuffle 직접 구현, worker 분배 신경</li>
+        <li><span class="chip orange">예시</span> HuggingFace <code>streaming=True</code>, WebDataset</li>
+      </ul>
+      <pre style="font-size:11px"><span class="k">class</span> StreamDS(IterableDataset):
+    <span class="k">def</span> __iter__(self):
+        info = get_worker_info()
+        <span class="k">for</span> line <span class="k">in</span> shard(info):
+            <span class="k">yield</span> tokenize(line)</pre>
+    </div>
+  </div>
+  <p class="small-note" style="margin-top:8px;">💡 GPT-3 학습은 Iterable-style. 토큰 수 3000억 → 디스크에 다 못 올림.</p>
+</section>
+
+<!-- 5. DataLoader options -->
+<section class="slide">
+  <h2>DataLoader — 모든 옵션 한눈에</h2>
+  <div class="two-col">
+    <div>
+      <pre><span class="n">loader</span> = DataLoader(
+  dataset,
+  batch_size=<span class="s">64</span>,
+  shuffle=<span class="k">True</span>,
+  num_workers=<span class="s">4</span>,
+  pin_memory=<span class="k">True</span>,
+  drop_last=<span class="k">False</span>,
+  persistent_workers=<span class="k">True</span>,
+  prefetch_factor=<span class="s">2</span>,
+  collate_fn=my_collate,
+  sampler=<span class="k">None</span>,
+)</pre>
+      <p class="small-note"><strong>주의:</strong> <code>shuffle</code>과 <code>sampler</code>는 양립 불가. 커스텀 sampler 쓰면 <code>shuffle=False</code>로.</p>
+    </div>
+    <div>
+      <table style="font-size:13px;">
+        <thead><tr><th>옵션</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>batch_size</code></td><td>한 번에 모델에 줄 샘플 수</td></tr>
+          <tr><td><code>shuffle</code></td><td>매 epoch 인덱스 섞기</td></tr>
+          <tr><td><code>num_workers</code></td><td>병렬 데이터 로딩 프로세스</td></tr>
+          <tr><td><code>pin_memory</code></td><td>고정 메모리 → CUDA 전송 ↑</td></tr>
+          <tr><td><code>drop_last</code></td><td>마지막 작은 batch 버림</td></tr>
+          <tr><td><code>persistent_workers</code></td><td>epoch 사이 worker 유지</td></tr>
+          <tr><td><code>prefetch_factor</code></td><td>worker당 미리 준비할 batch 수</td></tr>
+          <tr><td><code>collate_fn</code></td><td>샘플 → batch 합치는 함수</td></tr>
+          <tr><td><code>sampler</code></td><td>인덱스 추출 전략</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 6. Batch size effect -->
+<section class="slide">
+  <h2>Batch size — 왜 미니배치인가</h2>
+  <div class="two-col">
+    <div>
+      <p><strong>이론:</strong> 그래디언트 추정 분산은 1/√B에 비례.</p>
+      <div class="formula">σ(grad) ∝ 1/√B
+batch=1   → σ ≈ 1.00
+batch=64  → σ ≈ 0.125
+batch=256 → σ ≈ 0.0625</div>
+      <ul>
+        <li>B=1 (SGD): 매우 noisy, escape from saddle 좋음</li>
+        <li>B↑: 안정적, GPU 활용↑</li>
+        <li>B → ∞: full-batch GD (현실적이지 않음)</li>
+      </ul>
+      <div class="controls">
+        <label>batch size = <input type="range" id="bs" min="1" max="512" step="1" value="32"><span class="val-pill" id="bsV">32</span></label>
+      </div>
+      <p class="small-note">💡 GPT-3 학습 batch는 320만 토큰. ResNet-50 ImageNet은 256. <strong>Linear scaling rule:</strong> batch ×2 → lr ×2.</p>
+    </div>
+    <div class="plot-box" id="bsBox"></div>
+  </div>
+</section>
+
+<!-- 7. Shuffle -->
+<section class="slide">
+  <h2>Shuffle — 왜, 어떻게</h2>
+  <div class="two-col">
+    <div>
+      <p><strong>왜 필요한가?</strong></p>
+      <ul>
+        <li>같은 순서면 매 epoch 같은 미니배치 → SGD 수렴 노이즈 패턴 고정</li>
+        <li>클래스 라벨이 정렬되어 있으면 한 epoch 첫 절반 = class 0, 후반 = class 1 → <strong>학습 망함</strong></li>
+        <li>train: 반드시 <code>shuffle=True</code></li>
+        <li>val/test: <code>shuffle=False</code> (재현성)</li>
+      </ul>
+      <div class="controls">
+        <label><input type="checkbox" id="shOn" checked> shuffle 적용</label>
+      </div>
+      <p class="small-note">💡 컬러로 클래스 표시. shuffle OFF면 한 batch에 같은 클래스만 모임 → loss 그래디언트 한쪽으로 치우침.</p>
+    </div>
+    <div class="plot-box" id="shBox"></div>
+  </div>
+</section>
+
+<!-- 8. num_workers -->
+<section class="slide">
+  <h2>num_workers — 병렬 데이터 로딩</h2>
+  <div class="two-col">
+    <div>
+      <p>worker가 많으면 <strong>데이터 준비</strong>를 GPU 학습과 겹치게 할 수 있어요.</p>
+      <div class="controls">
+        <label>num_workers = <input type="range" id="nw" min="0" max="8" step="1" value="2"><span class="val-pill" id="nwV">2</span></label>
+        <p>총 시간 = <span class="val-pill out" id="nwT">8.0s</span> (가상)</p>
+      </div>
+      <ul>
+        <li><strong>0</strong> = 메인 프로세스 (디버깅/작은 데이터)</li>
+        <li><strong>너무 많음</strong> → RAM 폭발, fork 오버헤드</li>
+        <li>Mac/Windows: <code>if __name__ == '__main__':</code> 가드 필수</li>
+        <li>Jupyter는 0 권장 (일부 환경)</li>
+      </ul>
+      <p class="small-note">💡 <strong>경험칙:</strong> CPU 코어 수의 절반에서 시작 (예: 16-core → workers=8).</p>
+    </div>
+    <div class="plot-box" id="nwBox"></div>
+  </div>
+</section>
+
+<!-- 9. collate_fn -->
+<section class="slide">
+  <h2>collate_fn — 가변 길이 시퀀스 처리</h2>
+  <div class="two-col">
+    <div>
+      <p><strong>문제:</strong> NLP에서 문장 길이가 모두 다른데 텐서로 만들려면 같은 모양이어야. 기본 collate(<code>stack</code>)는 실패.</p>
+      <pre><span class="k">def</span> collate(batch):
+    seqs, labels = zip(*batch)
+    seqs = [torch.tensor(s) <span class="k">for</span> s <span class="k">in</span> seqs]
+    pad = nn.utils.rnn.pad_sequence(
+        seqs, batch_first=<span class="k">True</span>,
+        padding_value=<span class="s">0</span>)
+    lens = torch.tensor([len(s) <span class="k">for</span> s <span class="k">in</span> seqs])
+    <span class="k">return</span> pad, lens, torch.tensor(labels)
+
+loader = DataLoader(ds, batch_size=<span class="s">32</span>,
+    collate_fn=collate)</pre>
+      <p class="small-note">💡 모듈 14 Seq2Seq에서 이 패턴을 그대로 사용. PAD 토큰은 보통 0번 인덱스.</p>
+    </div>
+    <div class="plot-box" id="colBox"></div>
+  </div>
+</section>
+
+<!-- 10. Sampler -->
+<section class="slide">
+  <h2>Sampler — 누가 인덱스를 정하나</h2>
+  <div class="two-col">
+    <div>
+      <h3>기본 Sampler 종류</h3>
+      <table style="font-size:13px;">
+        <thead><tr><th>이름</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>SequentialSampler</code></td><td>0,1,2,... <code>shuffle=False</code> 기본</td></tr>
+          <tr><td><code>RandomSampler</code></td><td>무작위 <code>shuffle=True</code> 기본</td></tr>
+          <tr><td><code>WeightedRandomSampler</code></td><td>클래스 불균형 보정</td></tr>
+          <tr><td><code>SubsetRandomSampler</code></td><td>일부 인덱스만</td></tr>
+          <tr><td><code>DistributedSampler</code></td><td>멀티 GPU 학습</td></tr>
+        </tbody>
+      </table>
+      <pre style="margin-top:6px;"><span class="c"># 클래스 불균형 보정</span>
+counts = np.bincount(labels)
+weights = <span class="s">1.0</span> / counts[labels]
+sampler = WeightedRandomSampler(
+    weights, num_samples=len(labels),
+    replacement=<span class="k">True</span>)</pre>
+    </div>
+    <div class="plot-box" id="sampBox"></div>
+  </div>
+</section>
+
+<!-- 11. WeightedRandomSampler interactive -->
+<section class="slide">
+  <h2>WeightedRandomSampler 체험</h2>
+  <div class="two-col">
+    <div>
+      <p>클래스가 [800, 150, 50]이면 그대로 학습 → 모델이 다수 클래스만 예측.</p>
+      <div class="formula">w_i = 1 / count[label_i]
+sampler = WeightedRandomSampler(
+    weights=w, num_samples=N,
+    replacement=True)</div>
+      <div class="controls">
+        <label>class A 비율 = <input type="range" id="cA" min="0.1" max="0.95" step="0.01" value="0.8"><span class="val-pill" id="cAV">0.80</span></label>
+        <label><input type="checkbox" id="cBalance"> balanced (Weighted) 적용</label>
+        <p>실제 sample 분포: <span class="val-pill out" id="distOut">A:80% B:15% C:5%</span></p>
+      </div>
+      <p class="small-note">💡 신용카드 사기 데이터는 fraud 비율 0.17%. 보정 안 하면 "전부 정상"이 99.83% accuracy를 만듦 — 의미 없음.</p>
+    </div>
+    <div class="plot-box" id="wsBox"></div>
+  </div>
+</section>
+
+<!-- 12. Train/Val/Test split -->
+<section class="slide">
+  <h2>Train / Val / Test 분할</h2>
+  <div class="two-col">
+    <div>
+      <h3>random_split</h3>
+      <pre><span class="k">from</span> torch.utils.data <span class="k">import</span> random_split
+n = len(ds)
+n_tr = int(<span class="s">0.8</span> * n)
+n_va = (n - n_tr) // <span class="s">2</span>
+n_te = n - n_tr - n_va
+gen = torch.Generator().manual_seed(<span class="s">42</span>)
+tr, va, te = random_split(
+    ds, [n_tr, n_va, n_te], generator=gen)</pre>
+      <p class="small-note">💡 generator seed 고정해야 매번 같은 분할.</p>
+    </div>
+    <div>
+      <h3>주의 사항</h3>
+      <ul>
+        <li><span class="chip red">시계열</span>은 random split 금지 → 반드시 시간 순서</li>
+        <li><span class="chip red">그룹 leakage</span>: 같은 환자/유저가 train·test 양쪽에 → 평가 부풀림. <code>GroupKFold</code></li>
+        <li>val로 hyperparameter 튜닝, test는 마지막 한 번만</li>
+        <li>흔한 비율: 80/10/10, 70/15/15, 또는 K-fold</li>
+        <li><strong>stratified</strong> split: 클래스 비율 보존 (sklearn)</li>
+      </ul>
+      <div class="hint" style="margin-top: 8px;">💡 ImageNet은 train 1.28M / val 50k / test 100k. test는 라벨 비공개라 val로 보고.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 13. Transform / Augment -->
+<section class="slide">
+  <h2>Transform — 전처리와 증강</h2>
+  <div class="two-col">
+    <div>
+      <h3>이미지 (torchvision)</h3>
+      <pre><span class="k">from</span> torchvision <span class="k">import</span> transforms <span class="k">as</span> T
+
+train_tf = T.Compose([
+    T.RandomResizedCrop(<span class="s">224</span>),
+    T.RandomHorizontalFlip(),
+    T.ColorJitter(<span class="s">0.2</span>,<span class="s">0.2</span>,<span class="s">0.2</span>),
+    T.ToTensor(),
+    T.Normalize([<span class="s">0.485</span>,<span class="s">0.456</span>,<span class="s">0.406</span>],
+                [<span class="s">0.229</span>,<span class="s">0.224</span>,<span class="s">0.225</span>]),
+])
+val_tf = T.Compose([
+    T.Resize(<span class="s">256</span>), T.CenterCrop(<span class="s">224</span>),
+    T.ToTensor(), T.Normalize(...),
+])</pre>
+    </div>
+    <div>
+      <h3>증강은 train에만!</h3>
+      <ul>
+        <li>val/test에 augment 적용하면 평가가 흔들림</li>
+        <li>augment는 <code>__getitem__</code> 내부에서 호출 → <strong>매 epoch 다른 이미지</strong></li>
+        <li><code>num_workers &gt; 0</code>이면 CPU에서 병렬</li>
+        <li>NLP의 토크나이즈도 transform의 일종</li>
+      </ul>
+      <div class="analogy" style="margin-top: 8px;">데이터가 부족할 때 augment는 <strong>"공짜 데이터"</strong> 효과. 회전된 7도 7임을 모델에게 가르치는 일.</div>
+      <p class="small-note">💡 ImageNet 정규화 평균 [0.485, 0.456, 0.406]은 1.28M 이미지의 RGB 평균. 새 데이터셋은 직접 계산 권장.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 14. Bottleneck -->
+<section class="slide">
+  <h2>병목 진단 — GPU util이 낮으면</h2>
+  <table>
+    <thead><tr><th>증상</th><th>의심 원인</th><th>대응</th></tr></thead>
+    <tbody>
+      <tr><td><code>nvidia-smi</code> GPU util &lt; 50%</td><td>데이터 파이프라인 병목</td><td><code>num_workers</code>↑, <code>pin_memory=True</code></td></tr>
+      <tr><td>RAM 폭발</td><td>workers 너무 많음 / dataset 메모리 누수</td><td>workers↓, <code>persistent_workers=True</code></td></tr>
+      <tr><td>첫 epoch만 느림</td><td>worker fork 오버헤드</td><td><code>persistent_workers=True</code></td></tr>
+      <tr><td>collate에서 멈춤</td><td>collate_fn에 무거운 연산</td><td><code>__getitem__</code>으로 옮기기</td></tr>
+      <tr><td>디스크 IO 한계</td><td>HDD/네트워크 디스크</td><td>SSD, prefetch, lmdb/webdataset</td></tr>
+      <tr><td>특정 sample만 느림</td><td>__getitem__의 분기</td><td>profiling, caching</td></tr>
+    </tbody>
+  </table>
+  <div class="two-col" style="margin-top:14px;">
+    <div>
+      <p class="small-note">💡 측정 도구: <code>torch.profiler</code>, <code>nvidia-smi dmon -s u</code>, 직접 <code>time.perf_counter()</code>.</p>
+      <p class="small-note">💡 ImageNet에서 디스크 IO만 잘 잡아도 epoch 시간이 1/3로 줄어드는 사례 흔함.</p>
+    </div>
+    <div class="plot-box" id="botBox"></div>
+  </div>
+</section>
+
+<!-- 15. Practical patterns -->
+<section class="slide">
+  <h2>실용 패턴 모음</h2>
+  <div class="three-col" style="flex:1; min-height:0;">
+    <div class="card">
+      <h3>worker_init_fn (seed 고정)</h3>
+      <pre style="font-size:11px"><span class="k">def</span> seed_worker(wid):
+    s = torch.initial_seed() % <span class="s">2**32</span>
+    np.random.seed(s)
+    random.seed(s)
+
+loader = DataLoader(ds, ...,
+  worker_init_fn=seed_worker)</pre>
+      <p class="small-note">매 epoch마다 worker별로 같은 augment 시퀀스를 보장.</p>
+    </div>
+    <div class="card">
+      <h3>cycle for infinite loader</h3>
+      <pre style="font-size:11px"><span class="k">from</span> itertools <span class="k">import</span> cycle
+it = cycle(loader)
+<span class="k">for</span> step <span class="k">in</span> range(N_STEPS):
+    xb, yb = next(it)
+    <span class="c"># step 단위 학습</span></pre>
+      <p class="small-note">step 기반 학습 (Transformer, GAN)에서 유용.</p>
+    </div>
+    <div class="card">
+      <h3>커스텀 Compose</h3>
+      <pre style="font-size:11px"><span class="k">class</span> Compose:
+    <span class="k">def</span> __init__(self, ops):
+        self.ops = ops
+    <span class="k">def</span> __call__(self, x):
+        <span class="k">for</span> op <span class="k">in</span> self.ops:
+            x = op(x)
+        <span class="k">return</span> x</pre>
+      <p class="small-note">torchvision 의존 없이 NLP/audio에도 사용.</p>
+    </div>
+  </div>
+  <div class="three-col" style="margin-top: 14px;">
+    <div class="card">
+      <h3>HuggingFace datasets</h3>
+      <pre style="font-size:11px"><span class="k">from</span> datasets <span class="k">import</span> load_dataset
+ds = load_dataset(<span class="s">"imdb"</span>,
+                  streaming=<span class="k">True</span>)
+loader = DataLoader(
+    ds[<span class="s">"train"</span>], batch_size=<span class="s">32</span>)</pre>
+    </div>
+    <div class="card">
+      <h3>WebDataset (대용량)</h3>
+      <pre style="font-size:11px"><span class="k">import</span> webdataset <span class="k">as</span> wds
+ds = wds.WebDataset(
+    <span class="s">"data-{000..199}.tar"</span>)
+    .shuffle(<span class="s">1000</span>).decode(<span class="s">"pil"</span>)</pre>
+      <p class="small-note">tar 단위 streaming.</p>
+    </div>
+    <div class="card">
+      <h3>DistributedSampler</h3>
+      <pre style="font-size:11px">sampler = DistributedSampler(
+    ds, num_replicas=world_size,
+    rank=rank, shuffle=<span class="k">True</span>)
+loader = DataLoader(ds,
+    sampler=sampler)</pre>
+      <p class="small-note">DDP에서 각 GPU가 다른 샘플.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 16. Q&A -->
+<section class="slide">
+  <h2>Q&amp;A — 자주 묻는 질문</h2>
+  <div class="two-col">
+    <div>
+      <div class="card" style="margin-bottom: 10px;">
+        <h3>Q1. <code>shuffle=True</code>인데 sampler 지정해도 되나요?</h3>
+        <p>아닙니다. <code>RuntimeError</code>. sampler는 인덱스 추출 전략 = shuffle을 포함. 하나만 쓰세요.</p>
+      </div>
+      <div class="card">
+        <h3>Q2. <code>pin_memory=True</code>는 항상 켜야 하나요?</h3>
+        <p>CUDA 사용 시만 의미가 있어요. CPU만 쓰면 무의미하고 RAM 낭비.</p>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom: 10px;">
+        <h3>Q3. epoch 끝마다 RAM이 늘어나는데?</h3>
+        <p><code>__getitem__</code> 안의 캐시/append가 의심. <code>persistent_workers=False</code>로 워커가 매 epoch 재시작되게 → 확실한 누수 진단.</p>
+      </div>
+      <div class="card">
+        <h3>Q4. 마지막 batch가 작으면 BN/loss가 흔들립니다.</h3>
+        <p><code>drop_last=True</code>로 버리거나, batch_size로 정확히 나누어떨어지게 데이터를 자르세요.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 17. Summary -->
+<section class="slide">
+  <h2>요약</h2>
+  <div class="three-col">
+    <div class="card">
+      <h3>Dataset</h3>
+      <p><strong><code>__len__</code> + <code>__getitem__</code></strong></p>
+      <p class="small-note">한 샘플씩 반환. transform·augment는 여기서.</p>
+    </div>
+    <div class="card">
+      <h3>DataLoader</h3>
+      <p>batch · shuffle · workers · pin_memory · collate_fn</p>
+      <p class="small-note">batch 단위로 묶고 GPU에 흘려보냄.</p>
+    </div>
+    <div class="card">
+      <h3>Sampler</h3>
+      <p>인덱스 추출 전략</p>
+      <p class="small-note">불균형 보정·multi-GPU·subset에 활용.</p>
+    </div>
+  </div>
+  <div class="three-col" style="margin-top: 14px;">
+    <div class="card">
+      <h3>collate_fn</h3>
+      <p>샘플 → batch 합치는 함수</p>
+      <p class="small-note">가변 길이 시퀀스에 <code>pad_sequence</code>.</p>
+    </div>
+    <div class="card">
+      <h3>Augment 규칙</h3>
+      <p>train만, val/test는 결정적</p>
+      <p class="small-note">RandomCrop, Flip, ColorJitter.</p>
+    </div>
+    <div class="card">
+      <h3>병목 진단</h3>
+      <p>GPU util &lt; 50% → 파이프라인 의심</p>
+      <p class="small-note">workers↑, pin_memory, persistent.</p>
+    </div>
+  </div>
+  <p style="text-align:center; margin-top: 18px; font-size: 18px;">🎯 <strong>다음 모듈 09 — Regularization:</strong> Dropout · BatchNorm · weight decay로 일반화 향상</p>
+</section>
+
+<!-- 18. End -->
+<section class="slide title">
+  <h1>실습으로 직접 만져보세요 🛠</h1>
+  <div class="subtitle">notebook 08 — 커스텀 Dataset · num_workers 0 vs 4 · WeightedRandomSampler</div>
+  <p style="color:var(--muted); margin-top: 30px;">← 방향키로 돌아가 슬라이더를 다시 체험할 수 있어요.</p>
+</section>
+
+</div></div>
+
+<div class="navbar">
+  <button id="prevBtn" title="이전 (←)">←</button>
+  <div class="progress"><div class="bar" id="progBar"></div></div>
+  <div class="pageinfo" id="pageInfo">1 / N</div>
+  <button id="nextBtn" title="다음 (→)">→</button>
+</div>
+
+<script>
+(function(){
+  // ========== Auto-scale ==========
+  const SLIDE_W = 1280, SLIDE_H = 720;
+  const stage = document.getElementById('stage');
+  const slideWrap = document.getElementById('slideWrap');
+  function fit() {
+    const w = stage.clientWidth - 24;
+    const h = stage.clientHeight - 24;
+    const s = Math.min(w / SLIDE_W, h / SLIDE_H);
+    slideWrap.style.transform = `scale(${s})`;
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  // ========== Navigation ==========
+  const slides = document.querySelectorAll('.slide');
+  let idx = 0;
+  function go(n) {
+    idx = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+    document.getElementById('pageInfo').textContent = (idx + 1) + ' / ' + slides.length;
+    document.getElementById('progBar').style.width = ((idx + 1) / slides.length * 100) + '%';
+    document.getElementById('prevBtn').disabled = idx === 0;
+    document.getElementById('nextBtn').disabled = idx === slides.length - 1;
+    if (history.replaceState) history.replaceState(null, '', '#' + (idx + 1));
+  }
+  document.getElementById('prevBtn').addEventListener('click', () => go(idx - 1));
+  document.getElementById('nextBtn').addEventListener('click', () => go(idx + 1));
+  document.addEventListener('keydown', e => {
+    if (e.target.matches('input, select, textarea')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(idx + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(idx - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+  });
+  const hash = parseInt(location.hash.replace('#',''), 10);
+  if (!isNaN(hash)) go(hash - 1); else go(0);
+
+  // ========== Plot helpers ==========
+  function plotSVG({ w, h, xMin, xMax, yMin, yMax, curves, dots = [], vlines = [], hlines = [], extras = '', title = '', legend = [] }) {
+    const PAD_L = 42, PAD_R = 12, PAD_T = title ? 24 : 12, PAD_B = 28;
+    const sx = x => PAD_L + (x - xMin)/(xMax - xMin) * (w - PAD_L - PAD_R);
+    const sy = y => PAD_T + (1 - (y - yMin)/(yMax - yMin)) * (h - PAD_T - PAD_B);
+    let axes = '';
+    for (let x = Math.ceil(xMin); x <= Math.floor(xMax); x += Math.max(1, Math.ceil((xMax-xMin)/8))) {
+      axes += `<line x1="${sx(x)}" y1="${PAD_T}" x2="${sx(x)}" y2="${h-PAD_B}" stroke="#f1f3f5"/>`;
+      axes += `<text x="${sx(x)}" y="${h-PAD_B+14}" text-anchor="middle" font-size="10" fill="#6b7280">${x}</text>`;
+    }
+    const yStep = (yMax - yMin) / 5;
+    for (let i = 0; i <= 5; i++) {
+      const y = yMin + i*yStep;
+      axes += `<line x1="${PAD_L}" y1="${sy(y)}" x2="${w-PAD_R}" y2="${sy(y)}" stroke="#f1f3f5"/>`;
+      axes += `<text x="${PAD_L-6}" y="${sy(y)+4}" text-anchor="end" font-size="10" fill="#6b7280">${y.toFixed(1)}</text>`;
+    }
+    if (yMin <= 0 && yMax >= 0) axes += `<line x1="${PAD_L}" y1="${sy(0)}" x2="${w-PAD_R}" y2="${sy(0)}" stroke="#9aa0a6"/>`;
+    let curvesStr = '';
+    for (const c of curves) {
+      if (!c || !c.points || c.points.length < 2) continue;
+      let d = '';
+      c.points.forEach((p) => {
+        const px = sx(p[0]), py = sy(p[1]);
+        if (!isFinite(py)) return;
+        d += (d.length===0 ? 'M' : 'L') + px.toFixed(1) + ' ' + Math.max(PAD_T, Math.min(h-PAD_B, py)).toFixed(1) + ' ';
+      });
+      curvesStr += `<path d="${d}" stroke="${c.color}" stroke-width="${c.width||2}" fill="none" ${c.dash?'stroke-dasharray="'+c.dash+'"':''} opacity="${c.opacity||1}"/>`;
+      if (c.label) {
+        const lp = c.points[c.points.length-1];
+        curvesStr += `<text x="${sx(lp[0])-4}" y="${sy(lp[1])-4}" font-size="11" font-weight="700" fill="${c.color}" text-anchor="end">${c.label}</text>`;
+      }
+    }
+    let dotsStr = '';
+    for (const d of dots) {
+      dotsStr += `<circle cx="${sx(d.x)}" cy="${sy(d.y)}" r="${d.r||5}" fill="${d.color||'#ef4444'}" stroke="#fff" stroke-width="1.4"/>`;
+      if (d.label) dotsStr += `<text x="${sx(d.x)+8}" y="${sy(d.y)-8}" font-size="11" font-weight="700" fill="${d.color||'#ef4444'}">${d.label}</text>`;
+    }
+    let vStr = '';
+    for (const vl of vlines) vStr += `<line x1="${sx(vl.x)}" y1="${PAD_T}" x2="${sx(vl.x)}" y2="${h-PAD_B}" stroke="${vl.color||'#ef4444'}" stroke-dasharray="3,3"/>`;
+    for (const hl of hlines) vStr += `<line x1="${PAD_L}" y1="${sy(hl.y)}" x2="${w-PAD_R}" y2="${sy(hl.y)}" stroke="${hl.color||'#ef4444'}" stroke-dasharray="3,3"/>`;
+    let legStr = '';
+    legend.forEach((g, k) => {
+      legStr += `<rect x="${PAD_L+10+k*120}" y="${PAD_T+6}" width="14" height="3" fill="${g.color}"/>`;
+      legStr += `<text x="${PAD_L+28+k*120}" y="${PAD_T+10}" font-size="11" fill="#1a2230">${g.label}</text>`;
+    });
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+      ${title ? `<text x="${w/2}" y="14" text-anchor="middle" font-weight="700" font-size="13">${title}</text>` : ''}
+      <rect x="${PAD_L}" y="${PAD_T}" width="${w-PAD_L-PAD_R}" height="${h-PAD_T-PAD_B}" fill="#fcfcfc" stroke="#e5e7eb"/>
+      ${axes}${curvesStr}${vStr}${dotsStr}${legStr}${extras}
+    </svg>`;
+  }
+  function linspace(a, b, n) { const arr = []; for (let i = 0; i < n; i++) arr.push(a + (b-a)*i/(n-1)); return arr; }
+
+  // ========== Slide 2: GPU starvation chart ==========
+  (function(){
+    const box = document.getElementById('motiveBox');
+    if (!box) return;
+    const w = 460, h = 340, PAD = 36;
+    const cases = [
+      { name: 'workers=0',  gpu: 0.25, color: '#d93025' },
+      { name: 'workers=2',  gpu: 0.55, color: '#ff7043' },
+      { name: 'workers=4 + pin', gpu: 0.85, color: '#00a86b' },
+      { name: 'workers=8 + pin', gpu: 0.92, color: '#2e7d32' },
+    ];
+    let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+      <text x="${w/2}" y="22" text-anchor="middle" font-weight="700" font-size="13">DataLoader 설정 vs GPU 활용률</text>`;
+    const barH = 32;
+    cases.forEach((c, i) => {
+      const y = 60 + i*54;
+      const fullW = w - PAD*2 - 80;
+      svg += `<text x="${PAD}" y="${y+20}" font-size="12" fill="#1f2937" font-weight="600">${c.name}</text>`;
+      svg += `<rect x="${PAD+100}" y="${y}" width="${fullW}" height="${barH}" fill="#f3f4f6" stroke="#e5e7eb"/>`;
+      svg += `<rect x="${PAD+100}" y="${y}" width="${fullW*c.gpu}" height="${barH}" fill="${c.color}" opacity="0.85"/>`;
+      svg += `<text x="${PAD+100+fullW*c.gpu+4}" y="${y+20}" font-size="11" font-weight="700" fill="${c.color}">${(c.gpu*100).toFixed(0)}%</text>`;
+    });
+    svg += `<text x="${w/2}" y="${h-12}" text-anchor="middle" font-size="11" fill="#6b7280">동일 모델, 같은 batch_size — 데이터 파이프라인만 바꿈</text>`;
+    svg += `</svg>`;
+    box.innerHTML = svg;
+  })();
+
+  // ========== Slide 3: Dataset call animation (static viz) ==========
+  (function(){
+    const box = document.getElementById('dsBox');
+    if (!box) return;
+    const w = 460, h = 340;
+    let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+      <text x="${w/2}" y="20" text-anchor="middle" font-weight="700" font-size="13">Dataset이 인덱스를 받아 샘플 반환</text>`;
+    // sampler indices
+    const idxs = [3, 7, 1, 5, 0, 8];
+    idxs.forEach((idx, i) => {
+      const x = 30 + i*70;
+      svg += `<rect x="${x}" y="60" width="60" height="32" rx="6" fill="#ede7f6" stroke="#5e35b1"/>`;
+      svg += `<text x="${x+30}" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#5e35b1">idx=${idx}</text>`;
+      svg += `<line x1="${x+30}" y1="92" x2="${x+30}" y2="120" stroke="#9aa0a6" stroke-width="1.5" marker-end="url(#dsArr)"/>`;
+    });
+    svg += `<defs><marker id="dsArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#9aa0a6"/></marker></defs>`;
+    // dataset block
+    svg += `<rect x="30" y="120" width="${idxs.length*70 - 10}" height="60" rx="10" fill="#fff3e0" stroke="#e65100"/>`;
+    svg += `<text x="${30 + (idxs.length*70-10)/2}" y="148" text-anchor="middle" font-size="14" font-weight="700" fill="#e65100">Dataset.__getitem__(idx)</text>`;
+    svg += `<text x="${30 + (idxs.length*70-10)/2}" y="168" text-anchor="middle" font-size="11" fill="#6b7280">read · transform · normalize</text>`;
+    // outputs
+    idxs.forEach((idx, i) => {
+      const x = 30 + i*70;
+      const colors = ['#2b7cff','#ff7043','#00a86b','#5e35b1','#d93025','#0097a7'];
+      const c = colors[idx % colors.length];
+      svg += `<line x1="${x+30}" y1="180" x2="${x+30}" y2="210" stroke="#9aa0a6" stroke-width="1.5" marker-end="url(#dsArr)"/>`;
+      svg += `<rect x="${x+5}" y="210" width="50" height="50" rx="8" fill="${c}" opacity="0.85"/>`;
+      svg += `<text x="${x+30}" y="240" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">x${idx}</text>`;
+    });
+    // batch group
+    svg += `<rect x="20" y="280" width="${idxs.length*70+10}" height="40" rx="8" fill="#e8f5e9" stroke="#2e7d32"/>`;
+    svg += `<text x="${20 + (idxs.length*70+10)/2}" y="305" text-anchor="middle" font-size="13" font-weight="700" fill="#2e7d32">batch (collate_fn으로 stack)</text>`;
+    svg += `</svg>`;
+    box.innerHTML = svg;
+  })();
+
+  // ========== Slide 6: batch size noise ==========
+  (function(){
+    const box = document.getElementById('bsBox');
+    if (!box) return;
+    const sl = document.getElementById('bs');
+    const slV = document.getElementById('bsV');
+    let seed = 1;
+    function rand() { seed = (seed*9301+49297) % 233280; return seed/233280; }
+    function render() {
+      const B = parseInt(sl.value);
+      slV.textContent = B;
+      seed = 1;
+      const T = 60;
+      const xs = linspace(1, T, T);
+      const noiseScale = 0.6 / Math.sqrt(B);
+      const pts = xs.map(t => [t, 1.0*Math.exp(-0.05*t) + 0.05 + noiseScale*(rand() - 0.5)*1.2]);
+      box.innerHTML = plotSVG({
+        w: 460, h: 340, xMin: 1, xMax: T, yMin: 0, yMax: 1.6,
+        curves: [{ color: '#2b7cff', points: pts, width: 1.8, label: `B=${B}` }],
+        title: `batch=${B} → 그래디언트 noise σ ≈ ${noiseScale.toFixed(3)}`
+      });
+    }
+    sl.addEventListener('input', render);
+    render();
+  })();
+
+  // ========== Slide 7: shuffle vs sorted ==========
+  (function(){
+    const box = document.getElementById('shBox');
+    if (!box) return;
+    const cb = document.getElementById('shOn');
+    function render() {
+      const N = 60;
+      const labels = []; for (let k = 0; k < N; k++) labels.push(Math.floor(k/15));
+      let order = [...Array(N).keys()];
+      if (cb.checked) {
+        // deterministic shuffle (LCG-based) so each run is similar
+        let s = 7;
+        for (let k = N-1; k > 0; k--) {
+          s = (s*9301+49297) % 233280;
+          const j = Math.floor((s/233280)*(k+1));
+          [order[k], order[j]] = [order[j], order[k]];
+        }
+      }
+      const colors = ['#2b7cff','#ff7043','#00a86b','#7c4dff'];
+      const cell = 22, gap = 4, cols = 15;
+      const w = 460, h = 340;
+      let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+        <text x="${w/2}" y="22" text-anchor="middle" font-weight="700" font-size="13">${cb.checked ? 'shuffled' : 'sorted (BAD)'}</text>`;
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < cols; c++) {
+          const sIdx = order[r*cols + c];
+          const lab = labels[sIdx];
+          const x = 30 + c*(cell+gap);
+          const y = 60 + r*(cell+gap+6);
+          svg += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" fill="${colors[lab]}" rx="4"/>`;
+        }
+        svg += `<text x="${30 + cols*(cell+gap) + 10}" y="${60 + r*(cell+gap+6) + cell - 4}" font-size="11" fill="#6b7280">batch ${r+1}</text>`;
+      }
+      svg += `<g transform="translate(30, 220)">`;
+      for (let i = 0; i < 4; i++) {
+        svg += `<rect x="${i*100}" y="0" width="14" height="14" fill="${colors[i]}"/>`;
+        svg += `<text x="${i*100+22}" y="11" font-size="11" fill="#1f2937">class ${i}</text>`;
+      }
+      svg += `</g>`;
+      svg += `<text x="${w/2}" y="${h-30}" text-anchor="middle" font-size="11" fill="${cb.checked?'#00a86b':'#d93025'}" font-weight="700">${cb.checked ? '각 batch에 다양한 클래스 섞임 ✓' : '각 batch에 같은 클래스만 모임 ✗ — SGD 망가짐'}</text>`;
+      svg += `</svg>`;
+      box.innerHTML = svg;
+    }
+    cb.addEventListener('change', render);
+    render();
+  })();
+
+  // ========== Slide 8: num_workers gantt ==========
+  (function(){
+    const box = document.getElementById('nwBox');
+    if (!box) return;
+    const sl = document.getElementById('nw');
+    const slV = document.getElementById('nwV');
+    const tEl = document.getElementById('nwT');
+    function render() {
+      const W = parseInt(sl.value);
+      slV.textContent = W;
+      const totalSteps = 8;
+      const gpuT = 1.0;
+      const dataT = 2.0;
+      let ts = [];
+      if (W === 0) for (let k = 0; k < totalSteps; k++) ts.push((k+1)*dataT);
+      else for (let k = 0; k < totalSteps; k++) ts.push(Math.ceil((k+1)/W)*dataT);
+      let prevEnd = 0;
+      const gpuBars = [];
+      for (let k = 0; k < totalSteps; k++) {
+        const start = Math.max(prevEnd, ts[k]);
+        gpuBars.push([start, start+gpuT]);
+        prevEnd = start + gpuT;
+      }
+      const totalT = prevEnd;
+      tEl.textContent = totalT.toFixed(1) + 's';
+
+      const w = 460, h = 340, PAD = 24;
+      const usedW = w - PAD - 90;
+      const tx = t => PAD + 90 + t/totalT * usedW;
+      let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+        <text x="${w/2}" y="20" text-anchor="middle" font-weight="700" font-size="13">workers=${W} timeline · 총 ${totalT.toFixed(1)}s</text>`;
+      // GPU lane
+      svg += `<text x="${PAD}" y="55" font-size="11" fill="#1f2937" font-weight="600">GPU</text>`;
+      gpuBars.forEach((b, k) => {
+        svg += `<rect x="${tx(b[0])}" y="42" width="${tx(b[1])-tx(b[0])}" height="22" fill="#2b7cff" stroke="#fff"/>`;
+        svg += `<text x="${tx(b[0])+(tx(b[1])-tx(b[0]))/2}" y="58" font-size="10" fill="#fff" text-anchor="middle">${k+1}</text>`;
+      });
+      // worker lanes
+      const lanes = Math.max(1, W);
+      for (let lane = 0; lane < lanes; lane++) {
+        const y = 78 + lane*22;
+        svg += `<text x="${PAD}" y="${y+12}" font-size="11" fill="#6b7280">worker ${W===0 ? 'main' : lane}</text>`;
+        for (let k = 0; k < totalSteps; k++) {
+          if (W === 0 && lane !== 0) continue;
+          if (W > 0 && k % W !== lane) continue;
+          const startT = Math.floor(k/Math.max(1,W))*dataT;
+          const endT = startT + dataT;
+          svg += `<rect x="${tx(startT)}" y="${y}" width="${tx(endT)-tx(startT)}" height="16" fill="#ff7043" opacity="0.85" stroke="#fff"/>`;
+          svg += `<text x="${tx(startT)+(tx(endT)-tx(startT))/2}" y="${y+12}" font-size="9" fill="#fff" text-anchor="middle">b${k+1}</text>`;
+        }
+      }
+      svg += `<text x="${PAD}" y="${h-30}" font-size="11" fill="#6b7280">파랑 = GPU step (1s 고정), 주황 = data 준비 (2s/배치)</text>`;
+      svg += `<text x="${PAD}" y="${h-14}" font-size="11" fill="#1f2937" font-weight="700">workers ↑ → 데이터 준비가 GPU에 가려져 총 시간 ↓</text>`;
+      svg += `</svg>`;
+      box.innerHTML = svg;
+    }
+    sl.addEventListener('input', render);
+    render();
+  })();
+
+  // ========== Slide 9: collate visualization ==========
+  (function(){
+    const box = document.getElementById('colBox');
+    if (!box) return;
+    const w = 460, h = 340;
+    const lens = [4, 2, 6, 3];
+    const maxLen = Math.max(...lens);
+    let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+      <text x="${w/2}" y="22" text-anchor="middle" font-weight="700" font-size="13">pad_sequence — 같은 길이로 맞추기</text>`;
+    // before
+    svg += `<text x="20" y="55" font-size="12" font-weight="600" fill="#6b7280">before (가변 길이)</text>`;
+    lens.forEach((L, i) => {
+      const y = 70 + i*30;
+      for (let k = 0; k < L; k++) {
+        svg += `<rect x="${30 + k*26}" y="${y}" width="22" height="22" rx="3" fill="#2b7cff"/>`;
+        svg += `<text x="${41 + k*26}" y="${y+15}" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">${i}${k}</text>`;
+      }
+      svg += `<text x="${30 + maxLen*26 + 12}" y="${y+15}" font-size="11" fill="#6b7280">len=${L}</text>`;
+    });
+    // arrow
+    svg += `<text x="${w/2}" y="208" text-anchor="middle" font-size="20" fill="#9aa0a6">↓</text>`;
+    // after
+    svg += `<text x="20" y="232" font-size="12" font-weight="600" fill="#6b7280">after (PAD=0 으로 채움)</text>`;
+    lens.forEach((L, i) => {
+      const y = 248 + i*22;
+      for (let k = 0; k < maxLen; k++) {
+        const padded = k >= L;
+        svg += `<rect x="${30 + k*26}" y="${y}" width="22" height="18" rx="3" fill="${padded ? '#e5e7eb' : '#00a86b'}"/>`;
+        svg += `<text x="${41 + k*26}" y="${y+13}" text-anchor="middle" font-size="9" fill="${padded ? '#9aa0a6' : '#fff'}" font-weight="700">${padded ? '0' : i+''+k}</text>`;
+      }
+    });
+    svg += `<text x="${30 + maxLen*26 + 12}" y="262" font-size="11" fill="#6b7280">shape (4, ${maxLen})</text>`;
+    svg += `</svg>`;
+    box.innerHTML = svg;
+  })();
+
+  // ========== Slide 10: Sampler comparison ==========
+  (function(){
+    const box = document.getElementById('sampBox');
+    if (!box) return;
+    const w = 460, h = 340;
+    let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+      <text x="${w/2}" y="20" text-anchor="middle" font-weight="700" font-size="13">Sampler 종류별 인덱스 시퀀스</text>`;
+    const samplers = [
+      { name: 'Sequential', seq: [0,1,2,3,4,5,6,7,8,9,10,11], color: '#2b7cff' },
+      { name: 'Random',     seq: [3,7,1,9,5,2,11,0,4,8,6,10], color: '#ff7043' },
+      { name: 'Weighted',   seq: [2,2,7,9,2,5,2,11,7,2,3,2], color: '#5e35b1' },
+      { name: 'Subset',     seq: [3,7,1,9,5,3,7,1,9,5,3,7], color: '#00a86b' },
+    ];
+    samplers.forEach((s, i) => {
+      const y = 50 + i*70;
+      svg += `<text x="20" y="${y+8}" font-size="13" font-weight="700" fill="${s.color}">${s.name}</text>`;
+      s.seq.forEach((v, k) => {
+        const x = 30 + k*32;
+        svg += `<rect x="${x}" y="${y+18}" width="26" height="26" rx="4" fill="${s.color}" opacity="0.85"/>`;
+        svg += `<text x="${x+13}" y="${y+34}" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">${v}</text>`;
+      });
+    });
+    svg += `</svg>`;
+    box.innerHTML = svg;
+  })();
+
+  // ========== Slide 11: Weighted sampler effect ==========
+  (function(){
+    const box = document.getElementById('wsBox');
+    if (!box) return;
+    const sl = document.getElementById('cA');
+    const slV = document.getElementById('cAV');
+    const cb = document.getElementById('cBalance');
+    const out = document.getElementById('distOut');
+    function render() {
+      const a = parseFloat(sl.value);
+      slV.textContent = a.toFixed(2);
+      // raw
+      const raw = [a, (1-a)*0.75, (1-a)*0.25];
+      const sampled = cb.checked ? [1/3, 1/3, 1/3] : raw;
+      out.textContent = `A:${(sampled[0]*100).toFixed(0)}% B:${(sampled[1]*100).toFixed(0)}% C:${(sampled[2]*100).toFixed(0)}%`;
+      const w = 460, h = 340, PAD = 36;
+      let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+        <text x="${w/2}" y="22" text-anchor="middle" font-weight="700" font-size="13">${cb.checked ? 'WeightedRandomSampler 적용' : '원본 분포 (불균형)'}</text>`;
+      const labels = ['A','B','C'];
+      const colors = ['#2b7cff', '#ff7043', '#00a86b'];
+      // raw bars
+      svg += `<text x="${PAD}" y="60" font-size="12" font-weight="600" fill="#6b7280">원본</text>`;
+      raw.forEach((p, i) => {
+        const x = PAD + 80 + i*100;
+        const bh = p*200;
+        const baseY = 280;
+        svg += `<rect x="${x}" y="${baseY-bh}" width="60" height="${bh}" fill="${colors[i]}" opacity="0.4"/>`;
+        svg += `<text x="${x+30}" y="${baseY+14}" text-anchor="middle" font-size="11" fill="#6b7280">${labels[i]}</text>`;
+        svg += `<text x="${x+30}" y="${baseY-bh-6}" text-anchor="middle" font-size="11" font-weight="700" fill="${colors[i]}">${(p*100).toFixed(0)}%</text>`;
+      });
+      // sampled bars (overlay)
+      svg += `<text x="${PAD}" y="80" font-size="12" font-weight="600" fill="#1f2937">실제</text>`;
+      sampled.forEach((p, i) => {
+        const x = PAD + 80 + i*100 + 28;
+        const bh = p*200;
+        const baseY = 280;
+        svg += `<rect x="${x}" y="${baseY-bh}" width="32" height="${bh}" fill="${colors[i]}" opacity="0.95"/>`;
+      });
+      svg += `<text x="${w/2}" y="${h-14}" text-anchor="middle" font-size="11" fill="#6b7280">옅은 = 원본 비율 · 진한 = sampler 결과</text>`;
+      svg += `</svg>`;
+      box.innerHTML = svg;
+    }
+    sl.addEventListener('input', render);
+    cb.addEventListener('change', render);
+    render();
+  })();
+
+  // ========== Slide 14: Bottleneck mini chart ==========
+  (function(){
+    const box = document.getElementById('botBox');
+    if (!box) return;
+    const w = 460, h = 220;
+    const items = [
+      { label: 'CPU only', val: 0.20, color: '#d93025' },
+      { label: 'workers=2', val: 0.45, color: '#ff7043' },
+      { label: 'workers=4 + pin', val: 0.78, color: '#2e7d32' },
+    ];
+    let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+      <text x="${w/2}" y="20" text-anchor="middle" font-weight="700" font-size="13">실측 GPU util (mock)</text>`;
+    items.forEach((it, i) => {
+      const y = 50 + i*48;
+      const fullW = w - 200;
+      svg += `<text x="20" y="${y+22}" font-size="12" fill="#1f2937">${it.label}</text>`;
+      svg += `<rect x="140" y="${y}" width="${fullW}" height="32" fill="#f3f4f6"/>`;
+      svg += `<rect x="140" y="${y}" width="${fullW*it.val}" height="32" fill="${it.color}" opacity="0.85"/>`;
+      svg += `<text x="${140+fullW*it.val+6}" y="${y+22}" font-size="12" font-weight="700" fill="${it.color}">${(it.val*100).toFixed(0)}%</text>`;
+    });
+    svg += `</svg>`;
+    box.innerHTML = svg;
+  })();
+
+})();
+</script>
+</body>
+</html>

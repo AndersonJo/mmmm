@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>02. Tensor 101</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+:root { --accent:#2b7cff; --accent-2:#ff7043; --ok:#00a86b; --warn:#d93025; --muted:#6b7280; --bg:#ffffff; --ink:#1f2937; }
+*{box-sizing:border-box;} html,body{margin:0;padding:0;background:#e8eaed;color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",-apple-system,sans-serif;-webkit-font-smoothing:antialiased;height:100vh;overflow:hidden;}
+.stage{position:fixed;top:54px;left:0;right:0;bottom:0;overflow:hidden;}
+.slide-wrap{width:1280px;height:720px;transform-origin:top left;position:absolute;top:0;left:0;}
+.slide{position:absolute;inset:0;background:#fff;border-radius:4px;box-shadow:0 10px 30px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08);padding:48px 56px;display:none;flex-direction:column;overflow:hidden;}
+.slide.active{display:flex;animation:fade .25s ease;} @keyframes fade{from{opacity:0;}to{opacity:1;}}
+h1{font-size:48px;margin:0 0 12px;font-weight:800;letter-spacing:-.02em;}
+h2{font-size:30px;margin:0 0 12px;font-weight:800;letter-spacing:-.01em;}
+h3{font-size:18px;color:var(--accent);margin:4px 0 10px;font-weight:700;}
+p,li{font-size:16px;line-height:1.55;margin:6px 0;} ul{margin:6px 0;padding-left:22px;}
+code{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:.9em;}
+.slide.title{align-items:center;justify-content:center;text-align:center;} .slide.title h1{font-size:64px;}
+.subtitle{color:var(--muted);font-size:20px;margin-top:10px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:stretch;flex:1;min-height:0;}
+.two-col>*{min-width:0;min-height:0;display:flex;flex-direction:column;justify-content:center;}
+.two-col>.plot-box{justify-content:flex-start;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;align-items:stretch;}
+.card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;} .card h3{margin-top:0;}
+.pros{color:var(--ok);} .cons{color:var(--warn);}
+.formula{background:#eef3ff;border-left:4px solid var(--accent);padding:10px 14px;border-radius:6px;font-family:"JetBrains Mono","Menlo",monospace;font-size:15px;margin:10px 0;white-space:pre-wrap;}
+.chip{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;margin-right:6px;}
+.chip.blue{background:#e3f2fd;color:#1565c0;} .chip.orange{background:#fff3e0;color:#e65100;}
+.chip.green{background:#e8f5e9;color:#2e7d32;} .chip.red{background:#ffebee;color:#c62828;}
+.chip.purple{background:#ede7f6;color:#5e35b1;}
+.analogy{background:linear-gradient(135deg,#eef3ff,#fff);border-radius:12px;padding:14px 18px;margin:8px 0;} .analogy strong{color:var(--accent);}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;margin-top:10px;}
+.legend span{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;} .legend span.off{opacity:.3;}
+.legend i{display:inline-block;width:22px;height:4px;border-radius:2px;}
+.plot-box{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;overflow:hidden;display:flex;flex-direction:column;}
+.plot-box svg{display:block;width:100%;height:auto;flex:1;min-height:0;max-height:420px;}
+.small-note{color:var(--muted);font-size:13px;}
+table{width:100%;border-collapse:collapse;font-size:14px;} th,td{border:1px solid #e5e7eb;padding:8px 12px;text-align:left;} th{background:#f3f4f6;}
+.controls{margin-top:8px;font-size:14px;} .controls label{display:flex;align-items:center;gap:10px;margin:6px 0;}
+.controls input[type=range]{flex:1;accent-color:var(--accent);}
+.val-pill{display:inline-block;min-width:56px;padding:2px 10px;border-radius:999px;background:#eef3ff;color:var(--accent);font-family:"JetBrains Mono",monospace;font-weight:700;text-align:center;font-size:13px;}
+.val-pill.out{background:#fff3e0;color:#e65100;} .val-pill.grad{background:#e8f5e9;color:#2e7d32;}
+.hint{display:inline-block;background:#fffde7;border:1px dashed #fbc02d;border-radius:6px;padding:6px 12px;font-size:13px;color:#6b5b00;margin-top:8px;}
+.btn{padding:7px 14px;border-radius:6px;background:var(--accent);color:#fff;border:none;font-weight:600;font-size:13px;cursor:pointer;margin:3px;}
+.btn.secondary{background:#e5e7eb;color:var(--ink);} .btn.warn{background:var(--warn);} .btn.ok{background:var(--ok);}
+.dot{fill:#ef4444;} .guide-line{stroke:#ef4444;stroke-dasharray:3,3;stroke-width:1;}
+.navbar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.94);border:1px solid #dadce0;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.08);display:flex;align-items:center;gap:12px;padding:6px 14px;z-index:100;}
+.navbar button{width:32px;height:32px;border-radius:999px;border:none;background:var(--accent);color:#fff;font-size:15px;cursor:pointer;}
+.navbar button:disabled{background:#e5e7eb;color:#999;cursor:not-allowed;}
+.navbar .pageinfo{font-weight:700;color:var(--muted);min-width:56px;text-align:center;font-size:13px;}
+.navbar .progress{width:140px;height:5px;background:#e5e7eb;border-radius:999px;overflow:hidden;}
+.navbar .progress .bar{height:100%;background:var(--accent);transition:width .3s;}
+.topnav{position:fixed;top:0;left:0;right:0;height:54px;background:#fff;border-bottom:1px solid #dadce0;padding:0 24px;display:flex;align-items:center;gap:14px;z-index:100;}
+.topnav .title{font-weight:700;font-size:16px;} .topnav .hint-key{color:var(--muted);font-size:13px;}
+</style></head><body>
+
+<div class="topnav"><div class="title">02. Tensor 101 🧮</div><div class="hint-key">← → 방향키 / 슬라이더로 체험</div></div>
+
+<div class="stage" id="stage"><div class="slide-wrap" id="slideWrap">
+
+<!-- 1 Title -->
+<section class="slide title active">
+  <h1>Tensor 101</h1>
+  <div class="subtitle">shape · dtype · device · view · broadcasting</div>
+  <svg width="520" height="200" viewBox="0 0 520 200" style="margin-top:30px;">
+    <g>
+      <rect x="40" y="80" width="40" height="40" fill="#e3f2fd" stroke="#1565c0"/>
+      <text x="60" y="105" text-anchor="middle" font-size="11" font-weight="700">scalar</text>
+      <g transform="translate(140,60)">
+        <rect width="40" height="20" fill="#fff3e0" stroke="#e65100"/>
+        <rect y="20" width="40" height="20" fill="#fff3e0" stroke="#e65100"/>
+        <rect y="40" width="40" height="20" fill="#fff3e0" stroke="#e65100"/>
+        <text x="20" y="80" text-anchor="middle" font-size="11" font-weight="700">vector</text>
+      </g>
+      <g transform="translate(240,50)">
+        <rect width="60" height="80" fill="#e8f5e9" stroke="#2e7d32"/>
+        <line x1="20" y1="0" x2="20" y2="80" stroke="#2e7d32"/>
+        <line x1="40" y1="0" x2="40" y2="80" stroke="#2e7d32"/>
+        <line x1="0" y1="40" x2="60" y2="40" stroke="#2e7d32"/>
+        <text x="30" y="100" text-anchor="middle" font-size="11" font-weight="700">matrix</text>
+      </g>
+      <g transform="translate(360,40)">
+        <rect width="80" height="80" fill="#ede7f6" stroke="#5e35b1"/>
+        <rect x="-12" y="-12" width="80" height="80" fill="none" stroke="#5e35b1" stroke-dasharray="3,3"/>
+        <rect x="-24" y="-24" width="80" height="80" fill="none" stroke="#5e35b1" stroke-dasharray="3,3" opacity="0.4"/>
+        <text x="40" y="110" text-anchor="middle" font-size="11" font-weight="700">3D tensor</text>
+      </g>
+    </g>
+  </svg>
+  <p style="color:var(--muted); margin-top:30px;">Tensor = N차원 배열 + GPU + 자동미분</p>
+</section>
+
+<!-- 2 What is tensor -->
+<section class="slide">
+  <h2>텐서: 차원의 사다리</h2>
+  <div class="two-col">
+    <div>
+      <div class="analogy">
+        <p><strong>비유:</strong> 0D(점) → 1D(선) → 2D(평면) → 3D(상자) → 4D(상자의 묶음)</p>
+      </div>
+      <ul>
+        <li><span class="chip blue">0D</span> 스칼라: <code>tensor(3.14)</code> · shape=()</li>
+        <li><span class="chip orange">1D</span> 벡터: <code>tensor([1,2,3])</code> · shape=(3,)</li>
+        <li><span class="chip green">2D</span> 행렬: shape=(R,C) — Linear layer 입력</li>
+        <li><span class="chip purple">3D</span> shape=(B,T,D) — RNN/Transformer</li>
+        <li><span class="chip red">4D</span> shape=(B,C,H,W) — CNN 이미지 배치</li>
+      </ul>
+      <div class="hint">💡 모델이 안 돌면 90%는 shape 문제. 항상 <code>x.shape</code>를 찍어보세요.</div>
+    </div>
+    <div class="plot-box" id="dimBox"></div>
+  </div>
+</section>
+
+<!-- 3 shape/dtype/device picker -->
+<section class="slide">
+  <h2>shape / dtype / device 선택기</h2>
+  <div class="two-col">
+    <div>
+      <div class="controls">
+        <label>차원 수: <input type="range" id="tNd" min="1" max="4" step="1" value="2"><span class="val-pill" id="tNdV">2</span></label>
+        <label>dtype:
+          <select id="tDt">
+            <option value="float32">float32 (기본, 4B)</option>
+            <option value="float16">float16 (절반, 2B)</option>
+            <option value="int64">int64 (정수, 8B)</option>
+            <option value="bool">bool (1B)</option>
+          </select>
+        </label>
+        <label>device:
+          <select id="tDev">
+            <option value="cpu">cpu</option>
+            <option value="cuda">cuda</option>
+            <option value="mps">mps (Apple Silicon)</option>
+          </select>
+        </label>
+        <label>각 차원 크기 = <input type="range" id="tSz" min="1" max="32" step="1" value="4"><span class="val-pill" id="tSzV">4</span></label>
+      </div>
+      <div class="formula" id="tCode">x = torch.zeros((4, 4), dtype=torch.float32, device="cpu")</div>
+      <p>총 원소 수: <span class="val-pill" id="tN">16</span>
+         · 메모리: <span class="val-pill out" id="tMem">64 B</span></p>
+      <p class="small-note">💡 float32 → float16으로 바꾸면 메모리 절반. 정확도 약간 손해. (LLM 추론에서 흔함)</p>
+    </div>
+    <div class="plot-box" id="tBox"></div>
+  </div>
+</section>
+
+<!-- 4 Broadcasting -->
+<section class="slide">
+  <h2>브로드캐스팅 (Broadcasting)</h2>
+  <div class="two-col">
+    <div>
+      <p>shape이 다른 텐서를 더할 때 NumPy/PyTorch가 <strong>자동으로 차원을 맞추는 규칙</strong>.</p>
+      <div class="formula">규칙: 끝 차원부터 비교, (같다 또는 한쪽이 1)이면 OK</div>
+      <ul>
+        <li><code>(3,4) + (4,)</code> → 행마다 더함 ✓</li>
+        <li><code>(3,1) + (1,4)</code> → (3,4)로 펼침 ✓</li>
+        <li><code>(3,4) + (3,)</code> → ✗ shape mismatch</li>
+      </ul>
+      <div class="controls">
+        <label>예제:
+          <select id="bcEx">
+            <option value="0">(3,4) + (4,)</option>
+            <option value="1">(3,1) + (1,4)</option>
+            <option value="2">(2,3,4) + (3,1)</option>
+            <option value="3">(3,4) + (3,) (오류)</option>
+          </select>
+        </label>
+      </div>
+      <p>결과 shape: <span class="val-pill out" id="bcShape">(3,4)</span></p>
+      <p class="small-note">💡 attention의 mask 연산도 모두 broadcasting 위에서 동작.</p>
+    </div>
+    <div class="plot-box" id="bcBox"></div>
+  </div>
+</section>
+
+<!-- 5 Slicing -->
+<section class="slide">
+  <h2>슬라이싱 / 인덱싱 놀이터</h2>
+  <div class="two-col">
+    <div>
+      <p>Python의 슬라이싱이 N차원으로 확장. <strong>shape 6×6 행렬</strong>에서 잘라봅시다.</p>
+      <div class="controls">
+        <label>start row = <input type="range" id="slR0" min="0" max="5" step="1" value="1"><span class="val-pill" id="slR0V">1</span></label>
+        <label>end row = <input type="range" id="slR1" min="1" max="6" step="1" value="4"><span class="val-pill" id="slR1V">4</span></label>
+        <label>start col = <input type="range" id="slC0" min="0" max="5" step="1" value="2"><span class="val-pill" id="slC0V">2</span></label>
+        <label>end col = <input type="range" id="slC1" min="1" max="6" step="1" value="5"><span class="val-pill" id="slC1V">5</span></label>
+      </div>
+      <div class="formula" id="slCode">x[1:4, 2:5]</div>
+      <p>결과 shape: <span class="val-pill out" id="slShape">(3, 3)</span></p>
+      <p class="small-note">💡 슬라이스는 <strong>view</strong>(메모리 공유). 복사 아님 — 수정하면 원본 변함.</p>
+    </div>
+    <div class="plot-box" id="slBox"></div>
+  </div>
+</section>
+
+<!-- 6 Reshape vs view -->
+<section class="slide">
+  <h2>reshape · view · contiguous</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li><code>view</code> — 메모리 그대로 두고 shape만 재해석. <strong>contiguous</strong> 텐서에서만.</li>
+        <li><code>reshape</code> — 가능하면 view, 불가능하면 자동으로 복사.</li>
+        <li><code>contiguous()</code> — 메모리에 일렬로 다시 깔아둠.</li>
+      </ul>
+      <div class="formula">x = torch.arange(12)        # (12,)
+y = x.view(3, 4)            # (3,4)  같은 메모리
+z = y.t().contiguous()      # transpose 후 새 메모리
+w = z.view(12)              # ← OK</div>
+      <div class="hint">💡 transpose/permute 후엔 <strong>contiguous() 필요</strong>. 안 하면 RuntimeError.</div>
+      <p class="small-note">💡 view는 shape 변환의 <strong>0 cost</strong> 버전. 가능한 한 reshape보다 view를 사용.</p>
+    </div>
+    <div class="plot-box" id="vwBox"></div>
+  </div>
+</section>
+
+<!-- 7 Memory layout -->
+<section class="slide">
+  <h2>메모리 레이아웃 (Row-major)</h2>
+  <div class="two-col">
+    <div>
+      <p>2D 행렬 <code>(3,4)</code>은 메모리에 <strong>한 줄로</strong> 쌓여요. 이걸 어떻게 읽을지가 stride.</p>
+      <div class="formula">stride = (4, 1)
+# row 한 칸 = 4 step, col 한 칸 = 1 step</div>
+      <p><strong>transpose</strong>: stride가 (1,4)로 바뀜. 메모리 순서는 <strong>그대로</strong> — 그래서 view 불가.</p>
+      <div class="controls">
+        <label>view 할 shape: <select id="mlSh">
+          <option value="3,4">(3, 4) — 원본</option>
+          <option value="4,3">(4, 3) — 가능</option>
+          <option value="2,6">(2, 6) — 가능</option>
+          <option value="12">(12,) — 가능 (1D)</option>
+          <option value="3,5">(3, 5) — 불가 (총 원소 수 다름)</option>
+        </select></label>
+      </div>
+      <p>결과: <span id="mlMsg">✓ view 가능</span></p>
+      <div class="formula" id="mlCode"></div>
+    </div>
+    <div class="plot-box" id="mlBox"></div>
+  </div>
+</section>
+
+<!-- 8 Common ops -->
+<section class="slide">
+  <h2>자주 쓰는 연산 한 표</h2>
+  <table>
+    <thead><tr><th>연산</th><th>예시</th><th>의미</th><th>딥러닝에서</th></tr></thead>
+    <tbody>
+      <tr><td><code>+ - * /</code></td><td><code>a * b</code></td><td>원소별 (broadcasting)</td><td>activation, mask 적용</td></tr>
+      <tr><td><code>@</code> / <code>matmul</code></td><td><code>x @ W</code></td><td>행렬 곱</td><td>Linear, Attention QKᵀ</td></tr>
+      <tr><td><code>sum/mean/max</code></td><td><code>x.mean(dim=1)</code></td><td>축소</td><td>loss 평균, pooling</td></tr>
+      <tr><td><code>cat/stack</code></td><td><code>torch.cat([a,b], dim=0)</code></td><td>이어붙이기</td><td>concat features, batching</td></tr>
+      <tr><td><code>squeeze/unsqueeze</code></td><td><code>x.unsqueeze(0)</code></td><td>1차원 추가/제거</td><td>batch 차원 추가</td></tr>
+      <tr><td><code>permute/transpose</code></td><td><code>x.permute(0,2,1)</code></td><td>축 순서 바꾸기</td><td>NCHW ↔ NHWC, attention shape</td></tr>
+      <tr><td><code>argmax/topk</code></td><td><code>logits.argmax(-1)</code></td><td>최대 인덱스</td><td>예측 클래스, beam search</td></tr>
+      <tr><td><code>where</code></td><td><code>torch.where(mask, a, b)</code></td><td>조건부 선택</td><td>masking, padding</td></tr>
+    </tbody>
+  </table>
+  <p class="small-note">💡 GPT-3 forward의 90% 시간은 <code>matmul</code>에서 소비됩니다.</p>
+</section>
+
+<!-- Op1: element-wise -->
+<section class="slide">
+  <h2>연산 심화 ①: 원소별 + − * /</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula" id="ewCode">c = a * b   # 원소별 곱</div>
+      <ul>
+        <li>같은 위치 원소끼리만 연산 → GPU 모든 원소 <strong>완전 병렬</strong></li>
+        <li>결과: <strong>새 메모리 할당</strong>. In-place: <code>a.mul_(b)</code></li>
+        <li>Broadcasting 적용: <code>(3,4) * (4,)</code> → 행마다 반복</li>
+      </ul>
+      <div class="controls">
+        <label>연산자: <select id="ewOp">
+          <option value="add">+ (add)</option>
+          <option value="sub">− (sub)</option>
+          <option value="mul" selected>* (mul)</option>
+          <option value="div">/ (div)</option>
+        </select></label>
+      </div>
+      <p class="small-note">메모리: 2개 읽기 → 1개 쓰기 = <strong>memory-bound</strong>. Compute 아닌 bandwidth가 병목.</p>
+      <div class="hint">💡 In-place(<code>*=</code>) → autograd 그래프 파괴 주의!</div>
+    </div>
+    <div class="plot-box" id="ewBox"></div>
+  </div>
+</section>
+
+<!-- Op2: matmul -->
+<section class="slide">
+  <h2>연산 심화 ②: 행렬 곱 @ (matmul)</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">x = torch.randn(3, 4)    # (M=3, K=4)
+W = torch.randn(4, 3)    # (K=4, N=3)
+y = x @ W                # (M=3, N=3)
+# y[i,j] = sum(x[i,:] * W[:,j])</div>
+      <ul>
+        <li><code>y[i,j]</code> = <strong>x의 i행 · W의 j열 내적</strong></li>
+        <li>연산 수: <strong>M×N×K</strong> 곱셈+덧셈 (O(n³))</li>
+        <li>내부: <strong>cuBLAS GEMM</strong> — 타일링으로 L1 캐시 최대 활용</li>
+        <li>GPT-3 forward의 <strong>90%</strong>가 여기서 소비</li>
+      </ul>
+      <div class="controls">
+        <label>행 i: <input type="range" id="mmRow" min="0" max="2" step="1" value="0"><span class="val-pill" id="mmRowV">0</span></label>
+        <label>열 j: <input type="range" id="mmCol" min="0" max="2" step="1" value="0"><span class="val-pill" id="mmColV">0</span></label>
+      </div>
+    </div>
+    <div class="plot-box" id="mmBox"></div>
+  </div>
+</section>
+
+<!-- Op3: reduction -->
+<section class="slide">
+  <h2>연산 심화 ③: sum / mean / max (축소)</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">x = torch.arange(12).view(3,4).float()  # (3,4)
+x.sum(dim=0)              # → (4,)  행들 합산
+x.sum(dim=1)              # → (3,)  열들 합산
+x.sum(dim=1, keepdim=True)# → (3,1) shape 유지</div>
+      <ul>
+        <li><code>dim=0</code>: 행 차원이 사라짐 → 결과 <code>(4,)</code></li>
+        <li><code>keepdim=True</code>: shape 유지, broadcasting 편리</li>
+        <li>메모리: 축 제거된 <strong>새 텐서</strong>. CUDA parallel reduction kernel 사용</li>
+      </ul>
+      <div class="controls">
+        <label>dim: <select id="redDim">
+          <option value="0">dim=0 → (4,)</option>
+          <option value="1">dim=1 → (3,)</option>
+        </select></label>
+        <label>연산: <select id="redOp">
+          <option value="sum">sum</option>
+          <option value="mean">mean</option>
+          <option value="max">max</option>
+        </select></label>
+      </div>
+      <p>결과 shape: <span class="val-pill out" id="redShape">(4,)</span></p>
+    </div>
+    <div class="plot-box" id="redBox"></div>
+  </div>
+</section>
+
+<!-- Op4: cat/stack -->
+<section class="slide">
+  <h2>연산 심화 ④: cat / stack</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">a = torch.zeros(2, 3)
+b = torch.zeros(2, 3)
+torch.cat([a,b], dim=0)    # (4,3) 행 이어붙임
+torch.cat([a,b], dim=1)    # (2,6) 열 이어붙임
+torch.stack([a,b], dim=0)  # (2,2,3) 새 축 추가!</div>
+      <ul>
+        <li><code>cat</code>: 기존 축에 이어붙임 → <strong>차원 수 동일</strong></li>
+        <li><code>stack</code>: <strong>새 차원 추가</strong>. 입력 shape 모두 동일 필수</li>
+        <li>메모리: <strong>새 할당 + 데이터 복사</strong> — 공유 없음</li>
+      </ul>
+      <div class="controls">
+        <label><select id="csOp">
+          <option value="cat0">cat(dim=0) → (4, 3)</option>
+          <option value="cat1">cat(dim=1) → (2, 6)</option>
+          <option value="stack">stack(dim=0) → (2, 2, 3)</option>
+        </select></label>
+      </div>
+    </div>
+    <div class="plot-box" id="csBox"></div>
+  </div>
+</section>
+
+<!-- Op5: squeeze/unsqueeze -->
+<section class="slide">
+  <h2>연산 심화 ⑤: squeeze / unsqueeze</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">x = torch.randn(3, 4)
+x.unsqueeze(0)    # → (1, 3, 4)
+x.unsqueeze(1)    # → (3, 1, 4)
+x.unsqueeze(-1)   # → (3, 4, 1)
+
+y = torch.randn(1, 3, 1)
+y.squeeze()       # → (3,)  크기 1 축 제거</div>
+      <ul>
+        <li><strong>메모리 복사 없음</strong> — shape/stride 메타데이터만 변경 (0 cost!)</li>
+        <li><code>x[None]</code> = <code>x.unsqueeze(0)</code> — batch 차원 빠르게 추가</li>
+        <li>크기 1이 아닌 축에 squeeze → 무시됨</li>
+      </ul>
+      <div class="controls">
+        <label><select id="sqOp">
+          <option value="u0">unsqueeze(0): (3,4)→(1,3,4)</option>
+          <option value="u1">unsqueeze(1): (3,4)→(3,1,4)</option>
+          <option value="u2">unsqueeze(2): (3,4)→(3,4,1)</option>
+          <option value="sq">squeeze: (1,3,1)→(3,)</option>
+        </select></label>
+      </div>
+    </div>
+    <div class="plot-box" id="sqBox"></div>
+  </div>
+</section>
+
+<!-- Op6: permute/transpose -->
+<section class="slide">
+  <h2>연산 심화 ⑥: permute / transpose</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">x = torch.randn(2, 3, 4)      # stride=(12,4,1)
+y = x.permute(0, 2, 1)        # (2,4,3) stride=(12,1,4)
+z = x.transpose(1, 2)         # (2,4,3) 동일
+
+y.is_contiguous()   # False → view() 불가!
+y.contiguous()      # 새 메모리에 복사 후 연속</div>
+      <ul>
+        <li>데이터 이동 없이 <strong>stride 배열만 재배치</strong> → 0 cost</li>
+        <li>Non-contiguous: <code>view()</code> 실패, <code>reshape()</code>은 자동 복사</li>
+        <li>Attention: <code>(B,H,T,D)→(B,T,H,D)</code> 변환에 필수</li>
+      </ul>
+      <div class="hint">💡 같은 색 = 같은 메모리 주소의 데이터. stride만 달라져 읽는 순서가 바뀜.</div>
+    </div>
+    <div class="plot-box" id="permBox"></div>
+  </div>
+</section>
+
+<!-- Op7: argmax/topk -->
+<section class="slide">
+  <h2>연산 심화 ⑦: argmax / topk</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">logits = torch.tensor([0.1, 2.3, 0.5, 1.8, 0.9, 1.2])
+logits.argmax()          # → tensor(1)  (인덱스)
+logits.max()             # → tensor(2.3) (값)
+
+vals, idxs = logits.topk(3)
+# vals=[2.3,1.8,1.2], idxs=[1,3,5]
+
+# 2D: dim 지정
+x.argmax(dim=-1)  # 각 행의 최대 인덱스 → (B,)</div>
+      <ul>
+        <li><code>argmax</code>: dtype=int64 인덱스 텐서 반환</li>
+        <li><code>topk</code>: <code>(values, indices)</code> 튜플 반환, 정렬됨</li>
+        <li>메모리: 입력보다 훨씬 작은 출력 → <strong>massive reduction</strong></li>
+      </ul>
+      <div class="controls">
+        <label>k = <input type="range" id="tkK" min="1" max="6" step="1" value="3"><span class="val-pill" id="tkKV">3</span></label>
+      </div>
+    </div>
+    <div class="plot-box" id="tkBox"></div>
+  </div>
+</section>
+
+<!-- Op8: where -->
+<section class="slide">
+  <h2>연산 심화 ⑧: torch.where</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">mask = torch.tensor([[True,False,True],
+                   [False,True,False]])
+a    = torch.tensor([[1,2,3],[4,5,6]])
+b    = torch.tensor([[10,20,30],[40,50,60]])
+out  = torch.where(mask, a, b)
+# → [[1,20,3],[40,5,60]]</div>
+      <ul>
+        <li>원소별 조건부 선택: <code>mask ? a : b</code></li>
+        <li>Causal attention: <code>torch.where(mask, scores, -inf)</code></li>
+        <li>메모리: <strong>새 텐서 할당</strong>. mask/a/b 모두 broadcast 가능</li>
+        <li>내부: GPU에서 predicate + select를 <strong>단일 kernel</strong>에 수행</li>
+      </ul>
+      <div class="hint">💡 padding mask, causal mask 적용에 필수 패턴</div>
+    </div>
+    <div class="plot-box" id="whBox"></div>
+  </div>
+</section>
+
+<!-- 9 dtype gotchas -->
+<section class="slide">
+  <h2>dtype 함정 모음</h2>
+  <div class="three-col" style="flex:1; min-height:0;">
+    <div class="card">
+      <h3>int + float</h3>
+      <div class="formula">torch.tensor([1,2]) + torch.tensor([1.0, 2.0])
+# → float (자동 승격)</div>
+      <p class="small-note">손실 계산 시 int64 라벨 + float32 logit 자주 만남.</p>
+    </div>
+    <div class="card">
+      <h3>float16 underflow</h3>
+      <div class="formula">x = torch.tensor(0.0001, dtype=torch.float16)
+x*x  # = 0.0 (언더플로!)</div>
+      <p class="small-note">대형 모델은 보통 bfloat16 사용 (지수부 더 큼).</p>
+    </div>
+    <div class="card">
+      <h3>device 섞이면</h3>
+      <div class="formula">a = torch.tensor([1.], device='cuda')
+b = torch.tensor([2.])
+a + b  # RuntimeError!</div>
+      <p class="small-note">언제나 같은 device에 모은 뒤 연산.</p>
+    </div>
+  </div>
+  <div class="formula" style="margin-top:14px;">tip: <code>x.to(device, dtype=torch.float32)</code>로 한 번에 변환</div>
+</section>
+
+<!-- 10 Numpy ↔ Tensor -->
+<section class="slide">
+  <h2>NumPy ↔ Tensor 변환</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">arr = np.array([1.0, 2.0, 3.0])
+t = torch.from_numpy(arr)      # 메모리 공유!
+arr2 = t.numpy()                # 메모리 공유!</div>
+      <ul>
+        <li><span class="chip blue">from_numpy</span> — 같은 메모리 공유. 빠름.</li>
+        <li><span class="chip orange">tensor(arr)</span> — 항상 복사. 안전.</li>
+        <li>GPU 텐서 → numpy: <code>t.cpu().numpy()</code> 거쳐야 함</li>
+        <li>requires_grad=True 텐서는 <code>.detach()</code> 후 numpy</li>
+      </ul>
+      <div class="hint">💡 plot할 땐 항상 <code>x.detach().cpu().numpy()</code> 패턴.</div>
+    </div>
+    <div class="plot-box" id="npBox"></div>
+  </div>
+</section>
+
+<!-- 11 GPU acceleration -->
+<section class="slide">
+  <h2>GPU 가속의 마법</h2>
+  <div class="two-col">
+    <div>
+      <p>CPU → GPU로 옮기기만 해도 <strong>10~100배</strong> 빨라지는 이유: 동시에 수천 개 코어.</p>
+      <div class="formula">x = torch.randn(4096, 4096)
+%timeit x @ x        # CPU: ~1.5s
+x = x.to('cuda')
+%timeit x @ x        # GPU: ~0.02s (75배)</div>
+      <div class="controls">
+        <label>행렬 크기 N = <input type="range" id="gpuN" min="64" max="4096" step="64" value="1024">
+          <span class="val-pill" id="gpuNV">1024</span></label>
+      </div>
+      <p>예상 CPU 시간: <span class="val-pill out" id="gpuC">0.012 s</span> ·
+         예상 GPU 시간: <span class="val-pill grad" id="gpuG">0.0002 s</span></p>
+      <p class="small-note">💡 작은 크기에선 PCIe 전송 비용이 더 커서 오히려 GPU가 느릴 수도.</p>
+    </div>
+    <div class="plot-box" id="gpuBox"></div>
+  </div>
+</section>
+
+<!-- 12 Pitfalls -->
+<section class="slide">
+  <h2>흔한 실수 5선</h2>
+  <div class="two-col">
+    <div class="card">
+      <h3>1. shape 미스매치</h3>
+      <p>Linear(10, 5)에 (4, 8) 넣으면 폭발. 항상 <code>print(x.shape)</code>.</p>
+      <h3>2. requires_grad=False 깜빡</h3>
+      <p>모델 파라미터인데 학습 안 되면 이걸 의심.</p>
+      <h3>3. .item()으로 GPU 동기화</h3>
+      <p>학습 루프 안에서 <code>.item()</code>은 GPU를 강제로 멈춰요.</p>
+    </div>
+    <div class="card">
+      <h3>4. inplace 연산이 autograd 깨먹음</h3>
+      <p><code>x.add_(1)</code>은 in-place. requires_grad 텐서엔 위험.</p>
+      <h3>5. detach 안 하고 numpy 변환</h3>
+      <p>RuntimeError: Can't call numpy() on Tensor that requires grad.</p>
+      <p class="small-note">💡 5가지 모두 <strong>다음 모듈 03 Autograd</strong>에서 깊이 파헤칩니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 13 Summary -->
+<section class="slide">
+  <h2>정리</h2>
+  <div class="three-col" style="flex:1; min-height:0;">
+    <div class="card"><h3>shape</h3><p>차원의 길이 튜플. 디버깅 1순위.</p></div>
+    <div class="card"><h3>dtype</h3><p>float32 기본, fp16/bf16은 메모리·속도, int64는 라벨.</p></div>
+    <div class="card"><h3>device</h3><p>cpu/cuda/mps. 같은 device끼리만 연산.</p></div>
+  </div>
+  <div class="three-col" style="margin-top:14px; flex:1; min-height:0;">
+    <div class="card"><h3>broadcasting</h3><p>끝 차원부터 맞춤. attention mask 핵심.</p></div>
+    <div class="card"><h3>view vs reshape</h3><p>view는 0 cost, contiguous 필요.</p></div>
+    <div class="card"><h3>NumPy ↔ Tensor</h3><p>from_numpy 메모리 공유, .cpu().numpy()는 안전.</p></div>
+  </div>
+</section>
+
+<!-- 14 next -->
+<section class="slide title">
+  <h1>다음: 03. Autograd 🔁</h1>
+  <div class="subtitle">requires_grad · backward() · 계산 그래프</div>
+</section>
+
+</div></div>
+
+<div class="navbar">
+  <button id="prevBtn">←</button>
+  <div class="progress"><div class="bar" id="progBar"></div></div>
+  <div class="pageinfo" id="pageInfo">1 / N</div>
+  <button id="nextBtn">→</button>
+</div>
+
+<script>
+(function(){
+  const SW=1280,SH=720, st=document.getElementById('stage'), wp=document.getElementById('slideWrap');
+  function fit(){ wp.style.transform=`scale(${Math.min((st.clientWidth-24)/SW,(st.clientHeight-24)/SH)})`; }
+  window.addEventListener('resize',fit); fit();
+  const sl=document.querySelectorAll('.slide'); let i=0;
+  function go(n){i=Math.max(0,Math.min(sl.length-1,n));sl.forEach((s,k)=>s.classList.toggle('active',k===i));
+    document.getElementById('pageInfo').textContent=(i+1)+' / '+sl.length;
+    document.getElementById('progBar').style.width=((i+1)/sl.length*100)+'%';
+    document.getElementById('prevBtn').disabled=i===0; document.getElementById('nextBtn').disabled=i===sl.length-1;
+    if(history.replaceState) history.replaceState(null,'','#'+(i+1));}
+  document.getElementById('prevBtn').onclick=()=>go(i-1); document.getElementById('nextBtn').onclick=()=>go(i+1);
+  document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea')) return;
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();go(i+1);}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(i-1);}
+    else if(e.key==='Home') go(0); else if(e.key==='End') go(sl.length-1);});
+  const h=parseInt(location.hash.replace('#',''),10); if(!isNaN(h)) go(h-1); else go(0);
+
+  // Slide 2: dim ladder
+  (function(){
+    const box=document.getElementById('dimBox'); if(!box) return;
+    const W=460,H=340;
+    box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+      <text x="${W/2}" y="22" text-anchor="middle" font-weight="700" font-size="14">차원 별 텐서 모양</text>
+      <g transform="translate(40,60)">
+        <rect width="20" height="20" fill="#e3f2fd" stroke="#1565c0"/>
+        <text x="10" y="40" text-anchor="middle" font-size="11">scalar ()</text>
+      </g>
+      <g transform="translate(120,55)">
+        ${Array.from({length:5}).map((_,k)=>`<rect x="${k*22}" width="20" height="20" fill="#fff3e0" stroke="#e65100"/>`).join('')}
+        <text x="55" y="45" text-anchor="middle" font-size="11">vector (5,)</text>
+      </g>
+      <g transform="translate(260,40)">
+        ${Array.from({length:3}).flatMap((_,r)=>Array.from({length:4}).map((_,c)=>`<rect x="${c*20}" y="${r*20}" width="18" height="18" fill="#e8f5e9" stroke="#2e7d32"/>`)).join('')}
+        <text x="40" y="80" text-anchor="middle" font-size="11">matrix (3,4)</text>
+      </g>
+      <g transform="translate(40,180)">
+        <rect width="60" height="60" fill="#ede7f6" stroke="#5e35b1"/>
+        <rect x="-8" y="-8" width="60" height="60" fill="#fff" stroke="#5e35b1" stroke-dasharray="3,3"/>
+        <rect x="-16" y="-16" width="60" height="60" fill="#fff" stroke="#5e35b1" stroke-dasharray="3,3" opacity="0.5"/>
+        <text x="22" y="80" text-anchor="middle" font-size="11">3D (3,4,5)</text>
+        <text x="22" y="96" text-anchor="middle" font-size="10" fill="#6b7280">RNN: (B,T,D)</text>
+      </g>
+      <g transform="translate(170,180)">
+        ${Array.from({length:3}).map((_,k)=>`<rect x="${k*16}" y="${k*-6}" width="60" height="60" fill="#ffebee" stroke="#c62828" opacity="${1-k*0.3}"/>`).join('')}
+        <text x="46" y="100" text-anchor="middle" font-size="11">4D (B,C,H,W)</text>
+        <text x="46" y="116" text-anchor="middle" font-size="10" fill="#6b7280">CNN 이미지 배치</text>
+      </g>
+      <g transform="translate(310,180)">
+        <text x="0" y="20" font-size="13" font-weight="700" fill="#2b7cff">실전 예:</text>
+        <text x="0" y="42" font-size="12">BERT input: (32, 128)</text>
+        <text x="0" y="60" font-size="12">GPT logits: (32, 128, 50257)</text>
+        <text x="0" y="78" font-size="12">CNN: (64, 3, 224, 224)</text>
+      </g>
+    </svg>`;
+  })();
+
+  // Slide 3: tensor picker
+  (function(){
+    const box=document.getElementById('tBox'); if(!box) return;
+    const ndE=document.getElementById('tNd'), ndV=document.getElementById('tNdV');
+    const dtE=document.getElementById('tDt'), devE=document.getElementById('tDev');
+    const szE=document.getElementById('tSz'), szV=document.getElementById('tSzV');
+    const code=document.getElementById('tCode'), nP=document.getElementById('tN'), mP=document.getElementById('tMem');
+    const bytes={float32:4,float16:2,int64:8,bool:1};
+    function render(){
+      const nd=parseInt(ndE.value), sz=parseInt(szE.value);
+      ndV.textContent=nd; szV.textContent=sz;
+      const shape=Array(nd).fill(sz);
+      const total=Math.pow(sz,nd);
+      const mem=total*bytes[dtE.value];
+      const memS = mem<1024 ? `${mem} B` : mem<1024*1024 ? `${(mem/1024).toFixed(1)} KB` : `${(mem/1024/1024).toFixed(2)} MB`;
+      code.textContent=`x = torch.zeros((${shape.join(', ')}), dtype=torch.${dtE.value}, device="${devE.value}")`;
+      nP.textContent=total; mP.textContent=memS;
+      const W=460,H=340;
+      let cells='';
+      const showSize=Math.min(sz,8);
+      const cw=Math.min(36, 320/showSize);
+      const x0=(W-cw*showSize)/2, y0=80;
+      for(let i=0;i<showSize;i++) for(let j=0;j<showSize;j++){
+        cells+=`<rect x="${x0+j*cw}" y="${y0+i*cw}" width="${cw-2}" height="${cw-2}" fill="#eef3ff" stroke="#2b7cff" opacity="${nd>=2?1:0.2}"/>`;
+      }
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <text x="${W/2}" y="24" text-anchor="middle" font-weight="700" font-size="14">총 ${total}개 원소 · ${memS}</text>
+        ${cells}
+        <text x="${W/2}" y="${y0+cw*showSize+30}" text-anchor="middle" font-size="12" fill="#6b7280">${nd}D · 각 차원 ${sz} (${sz>showSize?'잘려서 표시':''})</text>
+      </svg>`;
+    }
+    [ndE,szE].forEach(e=>e.addEventListener('input',render));
+    [dtE,devE].forEach(e=>e.addEventListener('change',render)); render();
+  })();
+
+  // Slide 4: broadcasting
+  (function(){
+    const box=document.getElementById('bcBox'); if(!box) return;
+    const ex=document.getElementById('bcEx'), out=document.getElementById('bcShape');
+    const cases=[
+      {a:[3,4], b:[4],   r:[3,4], ok:true,  desc:"행마다 (4,)를 더함"},
+      {a:[3,1], b:[1,4], r:[3,4], ok:true,  desc:"외적처럼 (3,4)로 펼쳐짐"},
+      {a:[2,3,4], b:[3,1], r:[2,3,4], ok:true, desc:"앞에 1을 붙여 (1,3,1) → (2,3,4)"},
+      {a:[3,4], b:[3], r:null, ok:false, desc:"끝 차원이 4 vs 3 → 오류"}
+    ];
+    function render(){
+      const c=cases[parseInt(ex.value)];
+      out.textContent = c.ok ? `(${c.r.join(",")})` : "Error";
+      out.style.color = c.ok ? "#2b7cff" : "#d93025";
+      const W=460,H=340;
+      function drawShape(x,y,shape,color){
+        const dims=shape; const w=20,h=20;
+        let s='';
+        if(dims.length===1) for(let j=0;j<dims[0];j++) s+=`<rect x="${x+j*w}" y="${y}" width="${w-2}" height="${h-2}" fill="${color}30" stroke="${color}"/>`;
+        else for(let i=0;i<dims[0];i++) for(let j=0;j<(dims[1]||1);j++) s+=`<rect x="${x+j*w}" y="${y+i*h}" width="${w-2}" height="${h-2}" fill="${color}30" stroke="${color}"/>`;
+        return s;
+      }
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <text x="${W/2}" y="22" text-anchor="middle" font-weight="700" font-size="14">A + B = ?</text>
+        <text x="60" y="60" font-size="13" font-weight="700" fill="#2b7cff">A: (${c.a.join(',')})</text>
+        ${drawShape(60,70, c.a, "#2b7cff")}
+        <text x="280" y="60" font-size="13" font-weight="700" fill="#ff7043">B: (${c.b.join(',')})</text>
+        ${drawShape(280,70, c.b, "#ff7043")}
+        <text x="${W/2}" y="220" text-anchor="middle" font-size="14" font-weight="700" fill="${c.ok?'#00a86b':'#d93025'}">
+          ${c.ok? "→ broadcast OK: ("+c.r.join(",")+")":"→ ✗ shape mismatch"}
+        </text>
+        <text x="${W/2}" y="250" text-anchor="middle" font-size="12" fill="#6b7280">${c.desc}</text>
+        <text x="${W/2}" y="290" text-anchor="middle" font-size="11" fill="#6b7280">규칙: 끝 차원부터 비교, (같다 ∨ 1)이면 OK</text>
+      </svg>`;
+    }
+    ex.addEventListener('change',render); render();
+  })();
+
+  // Slide 5: slicing
+  (function(){
+    const box=document.getElementById('slBox'); if(!box) return;
+    const r0=document.getElementById('slR0'), r1=document.getElementById('slR1'),
+          c0=document.getElementById('slC0'), c1=document.getElementById('slC1');
+    const r0V=document.getElementById('slR0V'), r1V=document.getElementById('slR1V'),
+          c0V=document.getElementById('slC0V'), c1V=document.getElementById('slC1V');
+    const code=document.getElementById('slCode'), shape=document.getElementById('slShape');
+    function render(){
+      let a=parseInt(r0.value), b=parseInt(r1.value), c=parseInt(c0.value), d=parseInt(c1.value);
+      if(b<=a) b=a+1; if(d<=c) d=c+1;
+      r0V.textContent=a; r1V.textContent=b; c0V.textContent=c; c1V.textContent=d;
+      code.textContent=`x[${a}:${b}, ${c}:${d}]`;
+      shape.textContent=`(${b-a}, ${d-c})`;
+      const W=460,H=340;
+      const cw=44, x0=80, y0=60;
+      let cells='';
+      for(let i=0;i<6;i++) for(let j=0;j<6;j++){
+        const inside = i>=a && i<b && j>=c && j<d;
+        const fill = inside ? "#ff7043" : "#eef3ff";
+        const stroke = inside ? "#e65100" : "#2b7cff";
+        cells+=`<rect x="${x0+j*cw}" y="${y0+i*cw}" width="${cw-3}" height="${cw-3}" fill="${fill}" stroke="${stroke}"/>`;
+        cells+=`<text x="${x0+j*cw+(cw-3)/2}" y="${y0+i*cw+(cw-3)/2+4}" text-anchor="middle" font-size="10" fill="${inside?'#fff':'#6b7280'}">${i*6+j}</text>`;
+      }
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <text x="${W/2}" y="22" text-anchor="middle" font-weight="700" font-size="14">x = arange(36).view(6, 6)</text>
+        ${cells}
+      </svg>`;
+    }
+    [r0,r1,c0,c1].forEach(e=>e.addEventListener('input',render)); render();
+  })();
+
+  // Slide 6: view illustration
+  (function(){
+    const box=document.getElementById('vwBox'); if(!box) return;
+    const W=460,H=340;
+    let cells1='', cells2='';
+    for(let k=0;k<12;k++){
+      cells1+=`<rect x="${20+k*32}" y="60" width="30" height="30" fill="#eef3ff" stroke="#2b7cff"/>`;
+      cells1+=`<text x="${20+k*32+15}" y="80" text-anchor="middle" font-size="11">${k}</text>`;
+    }
+    for(let i=0;i<3;i++) for(let j=0;j<4;j++){
+      cells2+=`<rect x="${100+j*50}" y="${160+i*40}" width="46" height="36" fill="#fff3e0" stroke="#e65100"/>`;
+      cells2+=`<text x="${100+j*50+23}" y="${160+i*40+22}" text-anchor="middle" font-size="11">${i*4+j}</text>`;
+    }
+    box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+      <text x="${W/2}" y="20" text-anchor="middle" font-weight="700" font-size="14">view: 메모리 그대로, shape만 재해석</text>
+      <text x="20" y="50" font-size="12" font-weight="700" fill="#2b7cff">x = torch.arange(12)  → shape (12,)</text>
+      ${cells1}
+      <text x="20" y="150" font-size="12" font-weight="700" fill="#e65100">y = x.view(3, 4)  → shape (3, 4) 같은 메모리!</text>
+      ${cells2}
+      <text x="${W/2}" y="320" text-anchor="middle" font-size="12" fill="#6b7280">x[0]=99 하면 y[0,0]도 99로 바뀜</text>
+    </svg>`;
+  })();
+
+  // Slide 7: memory layout
+  (function(){
+    const box=document.getElementById('mlBox'); if(!box) return;
+    const sh=document.getElementById('mlSh'), msg=document.getElementById('mlMsg');
+    const codeEl=document.getElementById('mlCode');
+    const codeMap={
+      "3,4": "x = torch.arange(12)       # shape: (12,)\ny = x.view(3, 4)           # ✓ OK — 원본과 동일",
+      "4,3": "x = torch.arange(12)       # shape: (12,)\ny = x.view(4, 3)           # ✓ OK — 12 == 4×3",
+      "2,6": "x = torch.arange(12)       # shape: (12,)\ny = x.view(2, 6)           # ✓ OK — 12 == 2×6",
+      "12":  "x = torch.arange(12)       # shape: (12,)\ny = x.view(12)             # ✓ OK — 1D flatten",
+      "3,5": "x = torch.arange(12)       # shape: (12,)\ny = x.view(3, 5)           # ✗ RuntimeError: shape '(3,5)' invalid for size 12"
+    };
+    function render(){
+      const v=sh.value.split(',').map(s=>parseInt(s));
+      const total=v.reduce((a,b)=>a*b,1);
+      const ok = total===12;
+      msg.textContent = ok ? "✓ view 가능 (총 원소 수 = 12 일치)" : "✗ view 불가 (원소 수 다름)";
+      msg.style.color = ok ? "#00a86b" : "#d93025";
+      codeEl.textContent = codeMap[sh.value] || '';
+      const W=460,H=340;
+      let strip='';
+      for(let k=0;k<12;k++){
+        strip+=`<rect x="${20+k*36}" y="60" width="34" height="34" fill="#eef3ff" stroke="#2b7cff"/>`;
+        strip+=`<text x="${20+k*36+17}" y="80" text-anchor="middle" font-size="11">${k}</text>`;
+      }
+      let arr='';
+      if(ok){
+        const r=v[0]||1, c=v[1]||1;
+        const total2D = v.length===1 ? 1 : r;
+        const cwi=Math.min(40, 360/c);
+        for(let i=0;i<total2D;i++) for(let j=0;j<c;j++){
+          arr+=`<rect x="${50+j*cwi}" y="${180+i*cwi}" width="${cwi-3}" height="${cwi-3}" fill="#fff3e0" stroke="#e65100"/>`;
+          arr+=`<text x="${50+j*cwi+(cwi-3)/2}" y="${180+i*cwi+(cwi-3)/2+4}" text-anchor="middle" font-size="10">${i*c+j}</text>`;
+        }
+      }
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <text x="${W/2}" y="22" text-anchor="middle" font-weight="700" font-size="14">메모리는 한 줄: [0..11]</text>
+        ${strip}
+        <text x="20" y="160" font-size="12" font-weight="700" fill="#e65100">view(${sh.value}):</text>
+        ${arr}
+      </svg>`;
+    }
+    sh.addEventListener('change',render); render();
+  })();
+
+  // Op1: element-wise
+  (function(){
+    const box=document.getElementById('ewBox'); if(!box) return;
+    const opE=document.getElementById('ewOp'), codeEl=document.getElementById('ewCode');
+    const A=[[1,2,3],[4,5,6]], B=[[10,20,30],[40,50,60]];
+    const ops={
+      add:{sym:'+',fn:(a,b)=>a+b,code:'c = a + b   # 원소별 덧셈'},
+      sub:{sym:'−',fn:(a,b)=>a-b,code:'c = a - b   # 원소별 뺄셈'},
+      mul:{sym:'×',fn:(a,b)=>a*b,code:'c = a * b   # 원소별 곱'},
+      div:{sym:'÷',fn:(a,b)=>(a/b).toFixed(1),code:'c = a / b   # 원소별 나눗셈'}
+    };
+    const palette=['#e3f2fd','#fff3e0','#e8f5e9','#ede7f6','#fce4ec','#f3e5f5'];
+    function render(){
+      const op=ops[opE.value]; codeEl.textContent=op.code;
+      const C=A.map((r,i)=>r.map((v,j)=>op.fn(v,B[i][j])));
+      const W=460,H=300,cw=46,ch=40,rows=2,cols=3;
+      const x1=14,x2=x1+cols*cw+52,x3=x2+cols*cw+52,y0=80;
+      let sa='',sb='',sc='';
+      A.forEach((row,i)=>row.forEach((v,j)=>{
+        const ci=i*cols+j, mid=(cw-3)/2, midy=(ch-3)/2+5;
+        sa+=`<rect x="${x1+j*cw}" y="${y0+i*ch}" width="${cw-3}" height="${ch-3}" fill="${palette[ci]}" stroke="#1565c0"/>
+             <text x="${x1+j*cw+mid}" y="${y0+i*ch+midy}" text-anchor="middle" font-size="13">${v}</text>`;
+        sb+=`<rect x="${x2+j*cw}" y="${y0+i*ch}" width="${cw-3}" height="${ch-3}" fill="${palette[ci]}" stroke="#e65100"/>
+             <text x="${x2+j*cw+mid}" y="${y0+i*ch+midy}" text-anchor="middle" font-size="13">${B[i][j]}</text>`;
+        sc+=`<rect x="${x3+j*cw}" y="${y0+i*ch}" width="${cw-3}" height="${ch-3}" fill="${palette[ci]}" stroke="#2e7d32"/>
+             <text x="${x3+j*cw+mid}" y="${y0+i*ch+midy}" text-anchor="middle" font-size="12">${C[i][j]}</text>`;
+      }));
+      const ymid=y0+rows*ch/2;
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <text x="${x1+cols*cw/2}" y="32" text-anchor="middle" font-weight="700" font-size="13" fill="#1565c0">A (2,3)</text>${sa}
+        <text x="${x1+cols*cw+20}" y="${ymid+6}" text-anchor="middle" font-size="24" font-weight="700">${op.sym}</text>
+        <text x="${x2+cols*cw/2}" y="32" text-anchor="middle" font-weight="700" font-size="13" fill="#e65100">B (2,3)</text>${sb}
+        <text x="${x2+cols*cw+20}" y="${ymid+6}" text-anchor="middle" font-size="24" font-weight="700">=</text>
+        <text x="${x3+cols*cw/2}" y="32" text-anchor="middle" font-weight="700" font-size="13" fill="#2e7d32">C (2,3)</text>${sc}
+        <text x="${W/2}" y="${H-14}" text-anchor="middle" font-size="11" fill="#6b7280">새 메모리 할당 | 같은 색 = 같은 위치 원소끼리 연산</text>
+      </svg>`;
+    }
+    opE.addEventListener('change',render); render();
+  })();
+
+  // Op2: matmul
+  (function(){
+    const box=document.getElementById('mmBox'); if(!box) return;
+    const rowE=document.getElementById('mmRow'), rowV=document.getElementById('mmRowV');
+    const colE=document.getElementById('mmCol'), colV=document.getElementById('mmColV');
+    const M=3,K=4,N=3,cw=38,ch=34;
+    function render(){
+      const ri=parseInt(rowE.value), cj=parseInt(colE.value);
+      rowV.textContent=ri; colV.textContent=cj;
+      const W=460,H=320,xX=10,xW=xX+K*cw+54,xY=xW+N*cw+54,y0=65;
+      let sX='',sW='',sY='';
+      for(let i=0;i<M;i++) for(let k=0;k<K;k++){
+        const hl=i===ri;
+        sX+=`<rect x="${xX+k*cw}" y="${y0+i*ch}" width="${cw-2}" height="${ch-2}" fill="${hl?'#bbdefb':'#eef3ff'}" stroke="${hl?'#1565c0':'#90caf9'}"/>
+              <text x="${xX+k*cw+(cw-2)/2}" y="${y0+i*ch+(ch-2)/2+4}" text-anchor="middle" font-size="10">${i},${k}</text>`;
+      }
+      for(let k=0;k<K;k++) for(let j=0;j<N;j++){
+        const hl=j===cj;
+        sW+=`<rect x="${xW+j*cw}" y="${y0+k*ch}" width="${cw-2}" height="${ch-2}" fill="${hl?'#ffe0b2':'#fff3e0'}" stroke="${hl?'#e65100':'#ffcc80'}"/>
+              <text x="${xW+j*cw+(cw-2)/2}" y="${y0+k*ch+(ch-2)/2+4}" text-anchor="middle" font-size="10">${k},${j}</text>`;
+      }
+      for(let i=0;i<M;i++) for(let j=0;j<N;j++){
+        const hl=i===ri&&j===cj;
+        sY+=`<rect x="${xY+j*cw}" y="${y0+i*ch}" width="${cw-2}" height="${ch-2}" fill="${hl?'#c8e6c9':'#e8f5e9'}" stroke="${hl?'#2e7d32':'#a5d6a7'}"/>`;
+        if(hl) sY+=`<text x="${xY+j*cw+(cw-2)/2}" y="${y0+i*ch+(ch-2)/2+5}" text-anchor="middle" font-size="14" fill="#2e7d32">✓</text>`;
+      }
+      const ymid=y0+M*ch/2;
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <text x="${xX+K*cw/2}" y="22" text-anchor="middle" font-weight="700" font-size="12" fill="#1565c0">X (3,4)</text>${sX}
+        <text x="${xX+K*cw+20}" y="${ymid+6}" text-anchor="middle" font-size="22" font-weight="700">@</text>
+        <text x="${xW+N*cw/2}" y="22" text-anchor="middle" font-weight="700" font-size="12" fill="#e65100">W (4,3)</text>${sW}
+        <text x="${xW+N*cw+20}" y="${ymid+6}" text-anchor="middle" font-size="22" font-weight="700">=</text>
+        <text x="${xY+N*cw/2}" y="22" text-anchor="middle" font-weight="700" font-size="12" fill="#2e7d32">Y (3,3)</text>${sY}
+        <text x="${W/2}" y="${H-36}" text-anchor="middle" font-size="11" fill="#1565c0">파란 행 ${ri} · 주황 열 ${cj} → 초록 Y[${ri},${cj}]</text>
+        <text x="${W/2}" y="${H-16}" text-anchor="middle" font-size="10" fill="#6b7280">Y[${ri},${cj}] = Σ X[${ri},k]·W[k,${cj}]  k=0..3</text>
+      </svg>`;
+    }
+    rowE.addEventListener('input',render); colE.addEventListener('input',render); render();
+  })();
+
+  // Op3: reduction
+  (function(){
+    const box=document.getElementById('redBox'); if(!box) return;
+    const dimE=document.getElementById('redDim'), opE=document.getElementById('redOp');
+    const shapeEl=document.getElementById('redShape');
+    const data=[[0,1,2,3],[4,5,6,7],[8,9,10,11]];
+    function calc(arr,op){ return op==='sum'?arr.reduce((a,b)=>a+b,0):op==='mean'?(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1):Math.max(...arr); }
+    function render(){
+      const dim=parseInt(dimE.value), op=opE.value;
+      shapeEl.textContent=dim===0?'(4,)':'(3,)';
+      const W=460,H=320,R=3,C=4,cw=52,ch=42,x0=30,y0=50;
+      let cells='',arrows='',res='';
+      for(let i=0;i<R;i++) for(let j=0;j<C;j++){
+        cells+=`<rect x="${x0+j*cw}" y="${y0+i*ch}" width="${cw-3}" height="${ch-3}" fill="#eef3ff" stroke="#2b7cff"/>
+                <text x="${x0+j*cw+(cw-3)/2}" y="${y0+i*ch+(ch-3)/2+5}" text-anchor="middle" font-size="13">${data[i][j]}</text>`;
+      }
+      if(dim===0){
+        for(let j=0;j<C;j++){
+          const v=calc(data.map(r=>r[j]),op), rx=x0+j*cw, ry=y0+R*ch+28;
+          arrows+=`<line x1="${rx+(cw-3)/2}" y1="${y0+R*ch}" x2="${rx+(cw-3)/2}" y2="${ry}" stroke="#e65100" stroke-width="2" marker-end="url(#ard)"/>`;
+          res+=`<rect x="${rx}" y="${ry}" width="${cw-3}" height="${ch-3}" fill="#fff3e0" stroke="#e65100"/>
+                <text x="${rx+(cw-3)/2}" y="${ry+(ch-3)/2+5}" text-anchor="middle" font-size="12" font-weight="700">${v}</text>`;
+        }
+      } else {
+        for(let i=0;i<R;i++){
+          const v=calc(data[i],op), rx=x0+C*cw+28, ry=y0+i*ch;
+          arrows+=`<line x1="${x0+C*cw}" y1="${ry+(ch-3)/2}" x2="${rx}" y2="${ry+(ch-3)/2}" stroke="#e65100" stroke-width="2" marker-end="url(#ard)"/>`;
+          res+=`<rect x="${rx}" y="${ry}" width="${cw-3}" height="${ch-3}" fill="#fff3e0" stroke="#e65100"/>
+                <text x="${rx+(cw-3)/2}" y="${ry+(ch-3)/2+5}" text-anchor="middle" font-size="12" font-weight="700">${v}</text>`;
+        }
+      }
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <defs><marker id="ard" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#e65100"/></marker></defs>
+        <text x="${x0+C*cw/2}" y="32" text-anchor="middle" font-weight="700" font-size="13">x (3,4)  .${op}(dim=${dim})</text>
+        ${cells}${arrows}${res}
+        <text x="${W/2}" y="${H-10}" text-anchor="middle" font-size="11" fill="#6b7280">dim=${dim} 축 사라짐 → ${dim===0?'(4,)':'(3,)'}</text>
+      </svg>`;
+    }
+    dimE.addEventListener('change',render); opE.addEventListener('change',render); render();
+  })();
+
+  // Op4: cat/stack
+  (function(){
+    const box=document.getElementById('csBox'); if(!box) return;
+    const opE=document.getElementById('csOp');
+    const R=2,C=3,cw=44,ch=38;
+    function mat(ox,oy,color,r,c){
+      let s='';
+      for(let i=0;i<r;i++) for(let j=0;j<c;j++){
+        s+=`<rect x="${ox+j*cw}" y="${oy+i*ch}" width="${cw-3}" height="${ch-3}" fill="${color}28" stroke="${color}"/>
+            <text x="${ox+j*cw+(cw-3)/2}" y="${oy+i*ch+(ch-3)/2+5}" text-anchor="middle" font-size="11">${i*c+j}</text>`;
+      }
+      return s;
+    }
+    function render(){
+      const op=opE.value, W=460,H=320;
+      let s='';
+      if(op==='cat0'){
+        s+=`<text x="90" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#2b7cff">A (2,3)</text>`;
+        s+=mat(20,38,'#2b7cff',R,C);
+        s+=`<text x="90" y="${38+R*ch+18}" text-anchor="middle" font-size="11" font-weight="700" fill="#ff7043">B (2,3)</text>`;
+        s+=mat(20,38+R*ch+24,'#ff7043',R,C);
+        s+=`<text x="210" y="${38+R*ch+12}" text-anchor="middle" font-size="26">→</text>`;
+        s+=`<text x="350" y="28" text-anchor="middle" font-size="11" font-weight="700">결과 (4,3)</text>`;
+        s+=mat(252,38,'#2b7cff',R,C);
+        s+=mat(252,38+R*ch,'#ff7043',R,C);
+      } else if(op==='cat1'){
+        s+=`<text x="${20+C*cw/2}" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#2b7cff">A (2,3)</text>`;
+        s+=mat(20,40,'#2b7cff',R,C);
+        s+=`<text x="${20+C*cw+14+C*cw/2}" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#ff7043">B (2,3)</text>`;
+        s+=mat(20+C*cw+14,40,'#ff7043',R,C);
+        s+=`<text x="${W/2}" y="155" text-anchor="middle" font-size="24">↓</text>`;
+        s+=`<text x="${W/2}" y="178" text-anchor="middle" font-size="11" font-weight="700">결과 (2,6)</text>`;
+        s+=mat(14,185,'#2b7cff',R,C);
+        s+=mat(14+C*cw,185,'#ff7043',R,C);
+      } else {
+        s+=`<text x="${20+C*cw/2}" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#2b7cff">A (2,3)</text>`;
+        s+=mat(20,40,'#2b7cff',R,C);
+        s+=`<text x="${20+C*cw+30+C*cw/2}" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#ff7043">B (2,3)</text>`;
+        s+=mat(20+C*cw+30,40,'#ff7043',R,C);
+        s+=`<text x="${W/2}" y="165" text-anchor="middle" font-size="24">→</text>`;
+        s+=`<text x="${W/2}" y="188" text-anchor="middle" font-size="11" font-weight="700">결과 (2,2,3) — 새 축 dim=0</text>`;
+        // 3D: layer B behind, layer A in front
+        for(let i=0;i<R;i++) for(let j=0;j<C;j++){
+          s+=`<rect x="${190+j*cw+14}" y="${200+i*ch-12}" width="${cw-3}" height="${ch-3}" fill="#ff704328" stroke="#ff7043"/>`;
+        }
+        for(let i=0;i<R;i++) for(let j=0;j<C;j++){
+          s+=`<rect x="${190+j*cw}" y="${200+i*ch}" width="${cw-3}" height="${ch-3}" fill="#2b7cff28" stroke="#2b7cff"/>`;
+        }
+      }
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        ${s}
+        <text x="${W/2}" y="${H-10}" text-anchor="middle" font-size="11" fill="#6b7280">새 메모리 할당 + 복사 (공유 없음)</text>
+      </svg>`;
+    }
+    opE.addEventListener('change',render); render();
+  })();
+
+  // Op5: squeeze/unsqueeze
+  (function(){
+    const box=document.getElementById('sqBox'); if(!box) return;
+    const opE=document.getElementById('sqOp');
+    const cases={
+      u0:{before:[3,4],after:[1,3,4],desc:'.unsqueeze(0)'},
+      u1:{before:[3,4],after:[3,1,4],desc:'.unsqueeze(1)'},
+      u2:{before:[3,4],after:[3,4,1],desc:'.unsqueeze(2)'},
+      sq:{before:[1,3,1],after:[3],desc:'.squeeze()'}
+    };
+    function drawDims(x,y,dims,color){
+      const bw=50,bh=40,gap=6; let r='';
+      const total=dims.length*(bw+gap)-gap, ox=x-total/2;
+      dims.forEach((d,i)=>{
+        r+=`<rect x="${ox+i*(bw+gap)}" y="${y}" width="${bw}" height="${bh}" fill="${color}22" stroke="${color}" rx="6"/>
+            <text x="${ox+i*(bw+gap)+bw/2}" y="${y+bh/2+6}" text-anchor="middle" font-size="16" font-weight="700" fill="${color}">${d}</text>`;
+        if(i<dims.length-1) r+=`<text x="${ox+i*(bw+gap)+bw+gap/2}" y="${y+bh/2+6}" text-anchor="middle" font-size="14" fill="#aaa">×</text>`;
+      });
+      return r;
+    }
+    function render(){
+      const c=cases[opE.value], W=460,H=320;
+      let s='';
+      s+=`<text x="${W/2}" y="50" text-anchor="middle" font-size="13" fill="#555">before: (${c.before.join(', ')})</text>`;
+      s+=drawDims(W/2,62,c.before,'#2b7cff');
+      s+=`<text x="${W/2}" y="155" text-anchor="middle" font-size="28">↓</text>`;
+      s+=`<text x="${W/2}" y="178" text-anchor="middle" font-size="15" fill="#e65100" font-weight="700">${c.desc}</text>`;
+      s+=`<text x="${W/2}" y="210" text-anchor="middle" font-size="13" fill="#555">after: (${c.after.join(', ')})</text>`;
+      s+=drawDims(W/2,222,c.after,'#00a86b');
+      s+=`<rect x="30" y="282" width="${W-60}" height="28" fill="#e8f5e9" rx="6"/>
+          <text x="${W/2}" y="300" text-anchor="middle" font-size="12" fill="#2e7d32">메모리 복사 없음 — shape/stride 메타데이터만 변경 (0 cost!)</text>`;
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">${s}</svg>`;
+    }
+    opE.addEventListener('change',render); render();
+  })();
+
+  // Op6: permute/transpose
+  (function(){
+    const box=document.getElementById('permBox'); if(!box) return;
+    const R=3,C=4,cw=46,ch=38,W=460,H=320;
+    const palette=Array.from({length:R*C},(_,k)=>`hsl(${k*22},65%,80%)`);
+    let orig='',trans='';
+    for(let i=0;i<R;i++) for(let j=0;j<C;j++){
+      const ci=i*C+j;
+      orig+=`<rect x="${10+j*cw}" y="${60+i*ch}" width="${cw-3}" height="${ch-3}" fill="${palette[ci]}" stroke="#555"/>
+             <text x="${10+j*cw+(cw-3)/2}" y="${60+i*ch+(ch-3)/2+5}" text-anchor="middle" font-size="10">[${i},${j}]</text>`;
+    }
+    for(let j=0;j<C;j++) for(let i=0;i<R;i++){
+      const ci=i*C+j;
+      trans+=`<rect x="${245+i*cw}" y="${60+j*ch}" width="${cw-3}" height="${ch-3}" fill="${palette[ci]}" stroke="#555"/>
+              <text x="${245+i*cw+(cw-3)/2}" y="${60+j*ch+(ch-3)/2+5}" text-anchor="middle" font-size="10">[${j},${i}]</text>`;
+    }
+    box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+      <text x="${10+C*cw/2}" y="28" text-anchor="middle" font-weight="700" font-size="12">x (3,4)  stride=(4,1)</text>
+      ${orig}
+      <text x="${10+C*cw/2}" y="${60+R*ch+22}" text-anchor="middle" font-size="10" fill="#6b7280">row 1칸=4, col 1칸=1</text>
+      <text x="${245+R*cw/2}" y="28" text-anchor="middle" font-weight="700" font-size="12">x.T (4,3)  stride=(1,4)</text>
+      ${trans}
+      <text x="${245+R*cw/2}" y="${60+C*ch+22}" text-anchor="middle" font-size="10" fill="#6b7280">row 1칸=1, col 1칸=4</text>
+      <rect x="10" y="${H-46}" width="${W-20}" height="36" fill="#fff3e0" rx="6"/>
+      <text x="${W/2}" y="${H-28}" text-anchor="middle" font-size="12" fill="#e65100" font-weight="700">데이터 이동 없음 — stride (4,1)→(1,4) 변경만!</text>
+      <text x="${W/2}" y="${H-12}" text-anchor="middle" font-size="11" fill="#6b7280">같은 색 = 같은 메모리 주소 · non-contiguous → view() 불가</text>
+    </svg>`;
+  })();
+
+  // Op7: argmax/topk
+  (function(){
+    const box=document.getElementById('tkBox'); if(!box) return;
+    const kE=document.getElementById('tkK'), kV=document.getElementById('tkKV');
+    const vals=[0.1,2.3,0.5,1.8,0.9,1.2], labels=['0','1','2','3','4','5'];
+    function render(){
+      const k=parseInt(kE.value); kV.textContent=k;
+      const sorted=[...vals.map((v,i)=>({v,i}))].sort((a,b)=>b.v-a.v);
+      const topSet=new Set(sorted.slice(0,k).map(x=>x.i));
+      const maxI=sorted[0].i;
+      const W=460,H=290,bw=50,maxH=160,x0=40,y0=30,maxV=Math.max(...vals);
+      let bars='';
+      vals.forEach((v,i)=>{
+        const bh=Math.round(v/maxV*maxH);
+        const isMax=i===maxI, isTop=topSet.has(i);
+        const fill=isMax?'#d93025':isTop?'#2b7cff':'#e5e7eb';
+        bars+=`<rect x="${x0+i*bw}" y="${y0+maxH-bh}" width="${bw-6}" height="${bh}" fill="${fill}" stroke="${isMax?'#b71c1c':isTop?'#1565c0':'#9aa0a6'}" rx="3"/>
+               <text x="${x0+i*bw+(bw-6)/2}" y="${y0+maxH-bh-6}" text-anchor="middle" font-size="11" fill="${fill}" font-weight="700">${v}</text>
+               <text x="${x0+i*bw+(bw-6)/2}" y="${y0+maxH+16}" text-anchor="middle" font-size="12">idx=${i}</text>`;
+      });
+      const topStr=sorted.slice(0,k).map(x=>`[${x.i}]=${x.v}`).join(', ');
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <text x="${W/2}" y="20" text-anchor="middle" font-weight="700" font-size="13">logits (6,) — argmax &amp; topk(${k})</text>
+        ${bars}
+        <line x1="${x0-10}" y1="${y0+maxH}" x2="${x0+6*bw}" y2="${y0+maxH}" stroke="#e5e7eb"/>
+        <text x="${W/2}" y="${H-46}" text-anchor="middle" font-size="12" fill="#d93025">■ argmax → idx=${maxI} (값=${vals[maxI]})</text>
+        <text x="${W/2}" y="${H-26}" text-anchor="middle" font-size="11" fill="#2b7cff">■ topk(${k}) → ${topStr}</text>
+        <text x="${W/2}" y="${H-8}" text-anchor="middle" font-size="10" fill="#6b7280">메모리: (6,) 입력 → (${k},) 출력 (massive reduction)</text>
+      </svg>`;
+    }
+    kE.addEventListener('input',render); render();
+  })();
+
+  // Op8: where
+  (function(){
+    const box=document.getElementById('whBox'); if(!box) return;
+    const mask=[[true,false,true],[false,true,false]];
+    const A=[[1,2,3],[4,5,6]], B=[[10,20,30],[40,50,60]];
+    const R=2,C=3,cw=46,ch=38,W=460,H=310;
+    function grid(ox,oy,label,colorFn,valFn){
+      let s=`<text x="${ox+C*cw/2}" y="${oy-8}" text-anchor="middle" font-size="11" font-weight="700">${label}</text>`;
+      for(let i=0;i<R;i++) for(let j=0;j<C;j++){
+        const {f,k}=colorFn(i,j);
+        s+=`<rect x="${ox+j*cw}" y="${oy+i*ch}" width="${cw-3}" height="${ch-3}" fill="${f}" stroke="${k}"/>
+            <text x="${ox+j*cw+(cw-3)/2}" y="${oy+i*ch+(ch-3)/2+5}" text-anchor="middle" font-size="12">${valFn(i,j)}</text>`;
+      }
+      return s;
+    }
+    const gap=12;
+    const totalW=3*(C*cw)+2*gap, ox0=(W-totalW)/2;
+    const ox1=ox0, ox2=ox0+C*cw+gap, ox3=ox0+2*(C*cw+gap);
+    const y1=50, y2=185;
+    let s='';
+    s+=grid(ox1,y1,'mask (bool)',(i,j)=>mask[i][j]?{f:'#e8f5e9',k:'#2e7d32'}:{f:'#ffebee',k:'#c62828'},(i,j)=>mask[i][j]?'T':'F');
+    s+=grid(ox2,y1,'A (T→여기)',(i,j)=>mask[i][j]?{f:'#c8e6c9',k:'#2e7d32'}:{f:'#f5f5f5',k:'#ccc'},(i,j)=>A[i][j]);
+    s+=grid(ox3,y1,'B (F→여기)',(i,j)=>!mask[i][j]?{f:'#ffe0b2',k:'#e65100'}:{f:'#f5f5f5',k:'#ccc'},(i,j)=>B[i][j]);
+    s+=`<text x="${W/2}" y="168" text-anchor="middle" font-size="24">↓  torch.where(mask, A, B)</text>`;
+    s+=grid((W-C*cw)/2,y2,'결과',(i,j)=>mask[i][j]?{f:'#c8e6c9',k:'#2e7d32'}:{f:'#ffe0b2',k:'#e65100'},(i,j)=>mask[i][j]?A[i][j]:B[i][j]);
+    s+=`<text x="${W/2}" y="${H-10}" text-anchor="middle" font-size="11" fill="#6b7280">새 메모리 | mask=True→A, False→B | 단일 GPU kernel</text>`;
+    box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">${s}</svg>`;
+  })();
+
+  // Slide 10: numpy bridge
+  (function(){
+    const box=document.getElementById('npBox'); if(!box) return;
+    box.innerHTML=`<svg viewBox="0 0 460 340" width="100%" font-family="sans-serif">
+      <text x="230" y="24" text-anchor="middle" font-weight="700" font-size="14">메모리 공유 vs 복사</text>
+      <rect x="40" y="60" width="160" height="60" fill="#e3f2fd" stroke="#1565c0"/>
+      <text x="120" y="95" text-anchor="middle" font-size="13" font-weight="700">np.array</text>
+      <rect x="260" y="60" width="160" height="60" fill="#fff3e0" stroke="#e65100"/>
+      <text x="340" y="95" text-anchor="middle" font-size="13" font-weight="700">torch.Tensor</text>
+      <line x1="200" y1="80" x2="260" y2="80" stroke="#00a86b" stroke-width="3" marker-end="url(#mk1)"/>
+      <text x="230" y="72" text-anchor="middle" font-size="11" font-weight="700" fill="#00a86b">from_numpy</text>
+      <text x="230" y="96" text-anchor="middle" font-size="9" fill="#00a86b">(메모리 공유)</text>
+      <line x1="260" y1="100" x2="200" y2="100" stroke="#00a86b" stroke-width="3" marker-end="url(#mk1)" stroke-dasharray="5,3"/>
+      <text x="230" y="118" text-anchor="middle" font-size="11" font-weight="700" fill="#00a86b">.numpy()</text>
+      <defs><marker id="mk1" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#00a86b"/></marker></defs>
+      <rect x="40" y="180" width="380" height="50" rx="6" fill="#ffebee" stroke="#c62828"/>
+      <text x="230" y="200" text-anchor="middle" font-size="12" font-weight="700">GPU/grad 텐서:</text>
+      <text x="230" y="218" text-anchor="middle" font-size="11">x.detach().cpu().numpy()</text>
+      <text x="230" y="270" text-anchor="middle" font-size="12" fill="#6b7280">PyTorch ↔ NumPy = 같은 데이터, 다른 시점</text>
+    </svg>`;
+  })();
+
+  // Slide 11: GPU
+  (function(){
+    const box=document.getElementById('gpuBox'); if(!box) return;
+    const nE=document.getElementById('gpuN'), nV=document.getElementById('gpuNV');
+    const cP=document.getElementById('gpuC'), gP=document.getElementById('gpuG');
+    function render(){
+      const n=parseInt(nE.value); nV.textContent=n;
+      // matmul ~ N^3 ops, CPU 50 GFLOPS, GPU 10 TFLOPS
+      const ops=Math.pow(n,3);
+      const cpuT = ops/50e9 + 0.001;
+      const gpuT = ops/10e12 + 0.0001;
+      cP.textContent=cpuT.toFixed(4)+" s";
+      gP.textContent=gpuT.toFixed(5)+" s";
+      const W=460,H=340;
+      const sx=v=>50+(Math.log2(v)-6)/(12-6)*(W-80);
+      let p1='', p2='';
+      for(let v=64; v<=4096; v*=2){
+        const ops2=Math.pow(v,3);
+        const ct=ops2/50e9+0.001, gt=ops2/10e12+0.0001;
+        const ymax=2;
+        const py1=H-50-Math.min(ymax,ct)/ymax*(H-100);
+        const py2=H-50-Math.min(ymax,gt)/ymax*(H-100);
+        p1+=`<circle cx="${sx(v)}" cy="${py1}" r="3" fill="#d93025"/>`;
+        p2+=`<circle cx="${sx(v)}" cy="${py2}" r="3" fill="#00a86b"/>`;
+      }
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <text x="${W/2}" y="20" text-anchor="middle" font-weight="700" font-size="14">N×N matmul time (대략)</text>
+        <line x1="50" y1="50" x2="50" y2="${H-50}" stroke="#9aa0a6"/>
+        <line x1="50" y1="${H-50}" x2="${W-30}" y2="${H-50}" stroke="#9aa0a6"/>
+        <text x="50" y="60" text-anchor="end" font-size="11" fill="#6b7280">2s</text>
+        <text x="50" y="${H-50}" text-anchor="end" font-size="11" fill="#6b7280">0</text>
+        ${p1}${p2}
+        <line x1="${sx(n)}" y1="50" x2="${sx(n)}" y2="${H-50}" stroke="#ef4444" stroke-dasharray="3,3"/>
+        <text x="80" y="100" font-size="12" fill="#d93025">● CPU</text>
+        <text x="80" y="120" font-size="12" fill="#00a86b">● GPU</text>
+        <text x="${W/2}" y="${H-20}" text-anchor="middle" font-size="11" fill="#6b7280">N (log scale): 64 → 4096</text>
+      </svg>`;
+    }
+    nE.addEventListener('input',render); render();
+  })();
+})();
+</script>
+</body></html>

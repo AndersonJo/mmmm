@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>01. PyTorch란? — 인터랙티브 가이드</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+:root { --accent:#2b7cff; --accent-2:#ff7043; --ok:#00a86b; --warn:#d93025; --muted:#6b7280; --bg:#ffffff; --ink:#1f2937; }
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; background:#e8eaed; color:var(--ink);
+  font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",-apple-system,BlinkMacSystemFont,sans-serif;
+  -webkit-font-smoothing:antialiased; height:100vh; overflow:hidden; }
+.stage { position:fixed; top:54px; left:0; right:0; bottom:0; overflow:hidden; }
+.slide-wrap { width:1280px; height:720px; transform-origin:top left; position:absolute; top:0; left:0; }
+.slide { position:absolute; inset:0; background:#fff; border-radius:4px;
+  box-shadow:0 10px 30px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08);
+  padding:48px 56px; display:none; flex-direction:column; overflow:hidden; }
+.slide.active { display:flex; animation:fade .25s ease; }
+@keyframes fade { from{opacity:0;} to{opacity:1;} }
+h1 { font-size:48px; margin:0 0 12px; font-weight:800; letter-spacing:-.02em; }
+h2 { font-size:30px; margin:0 0 12px; font-weight:800; letter-spacing:-.01em; }
+h3 { font-size:18px; color:var(--accent); margin:4px 0 10px; font-weight:700; }
+p, li { font-size:16px; line-height:1.55; margin:6px 0; }
+ul { margin:6px 0; padding-left:22px; }
+code { background:#f3f4f6; padding:2px 6px; border-radius:4px; font-size:.9em; }
+.slide.title { align-items:center; justify-content:center; text-align:center; }
+.slide.title h1 { font-size:64px; }
+.subtitle { color:var(--muted); font-size:20px; margin-top:10px; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:32px; align-items:stretch; flex:1; min-height:0; }
+.two-col > * { min-width:0; min-height:0; display:flex; flex-direction:column; justify-content:center; }
+.two-col > .plot-box { justify-content:flex-start; }
+.three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; align-items:stretch; }
+.card { background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:18px 22px; display:flex; flex-direction:column; }
+.card h3 { margin-top:0; }
+.pros { color:var(--ok); } .cons { color:var(--warn); }
+.formula { background:#eef3ff; border-left:4px solid var(--accent); padding:10px 14px; border-radius:6px;
+  font-family:"JetBrains Mono","Menlo",monospace; font-size:15px; margin:10px 0; }
+.chip { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600; margin-right:6px; }
+.chip.blue{background:#e3f2fd;color:#1565c0;} .chip.orange{background:#fff3e0;color:#e65100;}
+.chip.green{background:#e8f5e9;color:#2e7d32;} .chip.red{background:#ffebee;color:#c62828;}
+.chip.purple{background:#ede7f6;color:#5e35b1;}
+.analogy { background:linear-gradient(135deg,#eef3ff,#fff); border-radius:12px; padding:14px 18px; margin:8px 0; }
+.analogy strong { color:var(--accent); }
+.legend { display:flex; gap:14px; flex-wrap:wrap; font-size:14px; margin-top:10px; }
+.legend span { display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; }
+.legend span.off { opacity:.3; }
+.legend i { display:inline-block; width:22px; height:4px; border-radius:2px; }
+.plot-box { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px; overflow:hidden; display:flex; flex-direction:column; }
+.plot-box svg { display:block; width:100%; height:auto; flex:1; min-height:0; max-height:420px; }
+.small-note { color:var(--muted); font-size:13px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { border:1px solid #e5e7eb; padding:8px 12px; text-align:left; }
+th { background:#f3f4f6; }
+.controls { margin-top:8px; font-size:14px; }
+.controls label { display:flex; align-items:center; gap:10px; margin:6px 0; }
+.controls input[type=range] { flex:1; accent-color:var(--accent); }
+.val-pill { display:inline-block; min-width:56px; padding:2px 10px; border-radius:999px;
+  background:#eef3ff; color:var(--accent);
+  font-family:"JetBrains Mono",monospace; font-weight:700; text-align:center; font-size:13px; }
+.val-pill.out { background:#fff3e0; color:#e65100; }
+.val-pill.grad { background:#e8f5e9; color:#2e7d32; }
+.hint { display:inline-block; background:#fffde7; border:1px dashed #fbc02d;
+  border-radius:6px; padding:6px 12px; font-size:13px; color:#6b5b00; margin-top:8px; }
+.btn { padding:7px 14px; border-radius:6px; background:var(--accent); color:#fff;
+  border:none; font-weight:600; font-size:13px; cursor:pointer; margin:3px; }
+.btn.secondary { background:#e5e7eb; color:var(--ink); }
+.btn.warn { background:var(--warn); } .btn.ok { background:var(--ok); }
+.dot { fill:#ef4444; } .guide-line { stroke:#ef4444; stroke-dasharray:3,3; stroke-width:1; }
+.navbar { position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
+  background:rgba(255,255,255,.94); border:1px solid #dadce0; border-radius:999px;
+  box-shadow:0 4px 14px rgba(0,0,0,.08); display:flex; align-items:center; gap:12px; padding:6px 14px; z-index:100; }
+.navbar button { width:32px; height:32px; border-radius:999px; border:none;
+  background:var(--accent); color:#fff; font-size:15px; cursor:pointer; }
+.navbar button:disabled { background:#e5e7eb; color:#999; cursor:not-allowed; }
+.navbar .pageinfo { font-weight:700; color:var(--muted); min-width:56px; text-align:center; font-size:13px; }
+.navbar .progress { width:140px; height:5px; background:#e5e7eb; border-radius:999px; overflow:hidden; }
+.navbar .progress .bar { height:100%; background:var(--accent); transition:width .3s; }
+.topnav { position:fixed; top:0; left:0; right:0; height:54px;
+  background:#fff; border-bottom:1px solid #dadce0; padding:0 24px;
+  display:flex; align-items:center; gap:14px; z-index:100; }
+.topnav .title { font-weight:700; font-size:16px; }
+.topnav .hint-key { color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+
+<div class="topnav">
+  <div class="title">01. PyTorch란?</div>
+  <div class="hint-key">← → 방향키 또는 아래 버튼으로 이동</div>
+</div>
+
+<div class="stage" id="stage"><div class="slide-wrap" id="slideWrap">
+
+<!-- 1. Title -->
+<section class="slide title active">
+  <h1>PyTorch란 무엇인가?</h1>
+  <div class="subtitle">파이썬으로 다루는 동적 그래프 딥러닝 프레임워크</div>
+  <svg width="640" height="200" viewBox="0 0 640 200" style="margin-top:30px;">
+    <defs>
+      <linearGradient id="lg" x1="0" x2="1"><stop offset="0" stop-color="#2b7cff"/><stop offset="1" stop-color="#ff7043"/></linearGradient>
+    </defs>
+    <rect x="20" y="80" width="120" height="60" rx="8" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="80" y="115" text-anchor="middle" font-weight="700" font-size="14">Theano (2007)</text>
+    <rect x="180" y="80" width="120" height="60" rx="8" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="240" y="115" text-anchor="middle" font-weight="700" font-size="14">TensorFlow (2015)</text>
+    <rect x="340" y="80" width="120" height="60" rx="8" fill="#fff3e0" stroke="#e65100"/>
+    <text x="400" y="115" text-anchor="middle" font-weight="700" font-size="14">PyTorch (2016)</text>
+    <rect x="500" y="80" width="120" height="60" rx="8" fill="#e8f5e9" stroke="#2e7d32"/>
+    <text x="560" y="115" text-anchor="middle" font-weight="700" font-size="14">JAX (2018)</text>
+    <line x1="140" y1="110" x2="180" y2="110" stroke="#9aa0a6" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="300" y1="110" x2="340" y2="110" stroke="#9aa0a6" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="460" y1="110" x2="500" y2="110" stroke="#9aa0a6" stroke-width="2" marker-end="url(#ar)"/>
+    <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#666"/></marker></defs>
+  </svg>
+  <p style="color:var(--muted); margin-top: 30px;">← → 방향키로 슬라이드 이동 · 슬라이더로 직접 체험</p>
+</section>
+
+<!-- 2. Why frameworks -->
+<section class="slide">
+  <h2>왜 딥러닝 프레임워크가 필요한가?</h2>
+  <div class="two-col">
+    <div>
+      <div class="analogy">
+        <p><strong>비유:</strong> 자동차 vs 부품 직접 깎기</p>
+        <p>NumPy로 신경망을 짜는 건 <strong>엔진을 직접 깎는 것</strong>. 프레임워크는 미리 만들어진 <strong>고성능 부품 + 자동 변속기(autograd)</strong>를 줍니다.</p>
+      </div>
+      <ul>
+        <li>🧠 자동 미분 (autograd) — 손으로 ∂L/∂W 계산 안 함</li>
+        <li>🚀 GPU/TPU 가속 — CUDA 커널 자동 호출</li>
+        <li>🧱 모듈화된 계층 — Linear, Conv, LSTM 즉시 사용</li>
+        <li>📦 데이터 파이프라인, 분산 학습, 양자화 등 풀스택</li>
+      </ul>
+      <div class="hint">💡 직접 코딩하면 ResNet50 한 번 돌리는 데 수 천 줄. PyTorch면 30줄.</div>
+    </div>
+    <div class="plot-box" id="whyBox"></div>
+  </div>
+</section>
+
+<!-- 3. Timeline interactive -->
+<section class="slide">
+  <h2>프레임워크 타임라인 — 연도 슬라이더</h2>
+  <div class="two-col">
+    <div>
+      <p>슬라이더로 연도를 바꾸면 그 시점의 <strong>지배적 프레임워크</strong>와 사건이 표시돼요.</p>
+      <div class="controls">
+        <label>연도 = <input type="range" id="tlYear" min="2007" max="2024" step="1" value="2016">
+          <span class="val-pill" id="tlYearV">2016</span></label>
+      </div>
+      <div class="card" id="tlEvent" style="margin-top:14px;">
+        <h3 id="tlTitle">PyTorch 0.1 발표</h3>
+        <p id="tlDesc">Facebook AI Research가 Lua 기반 Torch를 Python으로 재구현. 동적 그래프 채택.</p>
+      </div>
+      <p class="small-note">💡 2018년경 학계 점유율이 TF→PyTorch로 역전 (NeurIPS/ICML 논문 기준).</p>
+    </div>
+    <div class="plot-box" id="tlBox"></div>
+  </div>
+</section>
+
+<!-- 4. Static vs Dynamic graph -->
+<section class="slide">
+  <h2>정적 그래프 vs 동적 그래프</h2>
+  <div class="two-col">
+    <div>
+      <p>두 모드의 차이는 <strong>그래프를 언제 만드는가</strong>입니다. 토글로 같은 코드의 흐름을 비교하세요.</p>
+      <div class="controls">
+        <label>모드:
+          <select id="grMode">
+            <option value="static">정적 (Define-and-Run, 옛 TF 1.x)</option>
+            <option value="dynamic" selected>동적 (Define-by-Run, PyTorch)</option>
+          </select>
+        </label>
+        <p>입력 길이 n = <input type="range" id="grN" min="1" max="6" step="1" value="3">
+          <span class="val-pill" id="grNV">3</span></p>
+      </div>
+      <div class="formula" id="grCode">
+y = x
+for i in range(n):
+    y = y * 2 + 1
+loss = (y - target)**2
+</div>
+      <p class="small-note">💡 동적이면 매 iteration 그래프가 <strong>n에 따라 늘어나도</strong> 자동으로 새로 그려집니다.</p>
+    </div>
+    <div class="plot-box" id="grBox"></div>
+  </div>
+</section>
+
+<!-- 5. Eager vs Graph trade-offs -->
+<section class="slide">
+  <h2>Eager vs Graph 트레이드오프</h2>
+  <div class="three-col" style="flex:1; min-height:0;">
+    <div class="card">
+      <h3>Eager (즉시 실행)</h3>
+      <p class="pros">✓ 디버깅 쉬움 — print, pdb 그대로</p>
+      <p class="pros">✓ 파이썬 제어 흐름(if/for) 자유</p>
+      <p class="cons">✗ 그래프 최적화 제한</p>
+      <p class="cons">✗ 배포가 약간 까다로움</p>
+      <p class="small-note">PyTorch 기본 모드</p>
+    </div>
+    <div class="card">
+      <h3>Graph (사전 컴파일)</h3>
+      <p class="pros">✓ XLA/TensorRT 최적화</p>
+      <p class="pros">✓ TPU/모바일 배포 유리</p>
+      <p class="cons">✗ 디버깅 까다로움</p>
+      <p class="cons">✗ 동적 shape 어려움</p>
+      <p class="small-note">JAX, TF graph mode</p>
+    </div>
+    <div class="card">
+      <h3>하이브리드 (요즘 트렌드)</h3>
+      <p class="pros">✓ <code>torch.compile()</code> (PyTorch 2.0+)</p>
+      <p class="pros">✓ <code>tf.function</code></p>
+      <p class="pros">✓ 디버깅은 eager, 배포는 graph</p>
+      <p class="small-note">2026 표준</p>
+    </div>
+  </div>
+  <div class="formula" style="margin-top:14px;">
+PyTorch 2.x: model = torch.compile(model)  # 한 줄로 30~80% 속도 향상
+  </div>
+</section>
+
+<!-- 6. Hello world -->
+<section class="slide">
+  <h2>Hello, PyTorch — 30초 데모</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">
+import torch
+x = torch.tensor([1., 2., 3.], requires_grad=True)
+y = (x ** 2).sum()
+y.backward()
+print(x.grad)   # tensor([2., 4., 6.])
+      </div>
+      <ul>
+        <li><span class="chip blue">Tensor</span> — N차원 배열 (NumPy + GPU + 미분)</li>
+        <li><span class="chip orange">requires_grad</span> — 이 텐서를 추적해 줘</li>
+        <li><span class="chip green">backward()</span> — 자동 미분 트리거</li>
+        <li><span class="chip purple">.grad</span> — 계산된 ∂y/∂x</li>
+      </ul>
+      <div class="hint">💡 이게 PyTorch의 90%. 나머지는 이걸 모듈로 묶고 데이터를 흘려보내는 일.</div>
+    </div>
+    <div class="plot-box" id="helloBox"></div>
+  </div>
+</section>
+
+<!-- 7. Framework comparison -->
+<section class="slide">
+  <h2>프레임워크 한눈에 비교</h2>
+  <table>
+    <thead><tr><th>프레임워크</th><th>그래프</th><th>주 사용처</th><th>강점</th><th>약점</th></tr></thead>
+    <tbody>
+      <tr><td>PyTorch</td><td>동적+컴파일</td><td>연구·산업 표준</td><td>파이썬다움, 커뮤니티</td><td>TPU 약함</td></tr>
+      <tr><td>TensorFlow 2</td><td>eager+tf.function</td><td>모바일·서빙(TFLite)</td><td>배포 인프라</td><td>API 복잡</td></tr>
+      <tr><td>JAX</td><td>functional+XLA</td><td>대규모 연구(DeepMind)</td><td>벡터화/병렬 강력</td><td>러닝커브 가파름</td></tr>
+      <tr><td>MXNet</td><td>혼합</td><td>AWS 일부</td><td>다중 언어</td><td>커뮤니티 축소</td></tr>
+      <tr><td>Theano</td><td>정적</td><td>역사적 (단종)</td><td>최초의 자동미분</td><td>유지보수 종료</td></tr>
+    </tbody>
+  </table>
+  <div class="card" style="margin-top:14px;">
+    <h3>2026년 현황 (체감)</h3>
+    <p><span class="chip blue">학계 80%+</span> PyTorch · <span class="chip green">HuggingFace</span> 사실상 PyTorch 우선
+       · <span class="chip orange">Edge/TFLite</span> 여전히 TensorFlow · <span class="chip purple">Gemini/대형 모델</span> JAX 비중 큼</p>
+  </div>
+</section>
+
+<!-- 8. Decision tree -->
+<section class="slide">
+  <h2>언제 어떤 프레임워크를 고를까?</h2>
+  <div class="two-col">
+    <div>
+      <p>아래 질문에 답하면 추천 프레임워크가 표시됩니다.</p>
+      <div class="controls">
+        <label>주 목적:
+          <select id="dcUse">
+            <option value="research">연구 (논문, 빠른 실험)</option>
+            <option value="prod">프로덕션 서빙</option>
+            <option value="mobile">모바일/엣지</option>
+            <option value="largescale">초대형 모델 (TPU)</option>
+          </select>
+        </label>
+        <label>팀 경험:
+          <select id="dcExp">
+            <option value="py">파이썬·NumPy 친숙</option>
+            <option value="fp">함수형 프로그래밍 익숙</option>
+            <option value="none">처음 시작</option>
+          </select>
+        </label>
+      </div>
+      <div class="card" id="dcRec" style="margin-top:14px; background:#eef3ff; border-color:var(--accent);">
+        <h3>추천: <span id="dcRecName">PyTorch</span></h3>
+        <p id="dcRecWhy">대부분의 시작점. 가장 빠르게 결과를 보고 싶을 때.</p>
+      </div>
+    </div>
+    <div class="plot-box" id="dcBox"></div>
+  </div>
+</section>
+
+<!-- 9. Ecosystem -->
+<section class="slide">
+  <h2>PyTorch 생태계 지도</h2>
+  <div class="three-col" style="flex:1; min-height:0;">
+    <div class="card">
+      <h3>코어</h3>
+      <ul style="font-size:14px;">
+        <li><code>torch</code> — 텐서, autograd, optim</li>
+        <li><code>torch.nn</code> — 모듈 모음</li>
+        <li><code>torch.utils.data</code> — Dataset/DataLoader</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>도메인</h3>
+      <ul style="font-size:14px;">
+        <li><code>torchvision</code> — 이미지</li>
+        <li><code>torchaudio</code> — 오디오</li>
+        <li><code>torchtext</code> (deprecated → HF 권장)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>상위 라이브러리</h3>
+      <ul style="font-size:14px;">
+        <li><strong>HuggingFace transformers</strong> — 사전학습 모델</li>
+        <li><strong>PyTorch Lightning</strong> — 학습 루프 추상화</li>
+        <li><strong>Accelerate / DeepSpeed</strong> — 분산</li>
+        <li><strong>vLLM, llama.cpp</strong> — LLM 서빙</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small-note" style="margin-top:14px;">💡 KoGPT2(skt/kogpt2-base-v2)도 HF transformers + PyTorch 백엔드로 한 줄에 로드 가능.</p>
+</section>
+
+<!-- 10. Tensor preview -->
+<section class="slide">
+  <h2>핵심 객체: Tensor 한 줄 요약</h2>
+  <div class="two-col">
+    <div>
+      <div class="formula">
+torch.tensor(데이터, dtype, device, requires_grad)
+      </div>
+      <ul>
+        <li><span class="chip blue">데이터</span> — 리스트/NumPy/스칼라</li>
+        <li><span class="chip orange">dtype</span> — float32(기본), float16, int64, bool …</li>
+        <li><span class="chip green">device</span> — cpu / cuda / mps</li>
+        <li><span class="chip purple">requires_grad</span> — autograd 추적 여부</li>
+      </ul>
+      <div class="formula">
+x = torch.randn(3, 4, device="mps", dtype=torch.float32)
+print(x.shape, x.device, x.dtype)
+# torch.Size([3, 4]) mps:0 torch.float32
+      </div>
+      <p class="small-note">💡 다음 모듈(02 Tensor 101)에서 shape/dtype/device 슬라이더로 깊이 다룹니다.</p>
+    </div>
+    <div class="plot-box" id="tensorBox"></div>
+  </div>
+</section>
+
+<!-- 11. Autograd preview -->
+<section class="slide">
+  <h2>자동 미분 미리보기</h2>
+  <div class="two-col">
+    <div>
+      <p>딥러닝의 핵심은 결국 <strong>"손실에 대한 파라미터 미분"</strong>. PyTorch는 이걸 자동으로 해줘요.</p>
+      <div class="formula">
+w = torch.tensor(2.0, requires_grad=True)
+loss = (w*3 - 6) ** 2     # = (3w - 6)²
+loss.backward()
+w.grad   # = 2·(3w-6)·3 = 0  (w=2)
+      </div>
+      <div class="controls">
+        <label>w = <input type="range" id="agW" min="-3" max="6" step="0.1" value="2.0">
+          <span class="val-pill" id="agWV">2.00</span></label>
+        <p>loss = <span class="val-pill out" id="agLV">0.00</span> ·
+           dL/dw = <span class="val-pill grad" id="agGV">0.00</span></p>
+      </div>
+      <div class="hint">💡 학습 = "w를 살짝 옮기면 loss가 줄어드는 방향"을 grad에서 바로 읽음.</div>
+    </div>
+    <div class="plot-box" id="agBox"></div>
+  </div>
+</section>
+
+<!-- 12. Common confusions -->
+<section class="slide">
+  <h2>흔한 오해 Q&amp;A</h2>
+  <div class="two-col">
+    <div class="card">
+      <h3>"PyTorch가 NumPy보다 느린 거 아닌가요?"</h3>
+      <p>CPU 단일 스레드에선 비슷. 하지만 <strong>GPU에선 10~100배</strong>. 또 자동 미분은 NumPy엔 없죠.</p>
+      <h3>"동적 그래프는 항상 느린가요?"</h3>
+      <p>아니요. <code>torch.compile()</code>로 graph 캡처해 XLA/TorchInductor가 정적 그래프와 동등하게 가속.</p>
+    </div>
+    <div class="card">
+      <h3>"모델 배포는 어떻게?"</h3>
+      <p><code>torch.jit.script</code>, <code>torch.export</code>, ONNX, TorchServe, vLLM 등 단계별 옵션.</p>
+      <h3>"한국어 모델도 되나요?"</h3>
+      <p>네. <strong>skt/kogpt2-base-v2</strong>(이번 강의 마지막 노트북 15)는 PyTorch 가중치로 제공됩니다.</p>
+    </div>
+  </div>
+  <p class="small-note" style="margin-top:14px;">💡 PyTorch는 <strong>"학습부터 서빙까지"</strong> 한 도구로 가능한 거의 유일한 종합 생태계.</p>
+</section>
+
+<!-- 13. What we'll build today -->
+<section class="slide">
+  <h2>Day 1에서 우리가 만들 것</h2>
+  <div class="three-col" style="flex:1; min-height:0;">
+    <div class="card">
+      <h3>오전</h3>
+      <ul style="font-size:14px;">
+        <li>02 Tensor 101</li>
+        <li>03 Autograd 깊이 파기</li>
+        <li>04 nn.Module/Linear</li>
+        <li>05 Loss 함수</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>오후 1부</h3>
+      <ul style="font-size:14px;">
+        <li>06 Optimizer (SGD, Adam)</li>
+        <li>07 풀 학습 루프 + MNIST</li>
+        <li>08 DataLoader</li>
+        <li>09 Dropout/BN/WD</li>
+        <li>10 Gradient clipping</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>오후 2부 — 시퀀스</h3>
+      <ul style="font-size:14px;">
+        <li>11 RNN 직관</li>
+        <li>12 LSTM 깊이</li>
+        <li>13 GRU 비교</li>
+        <li>14 Seq2Seq → Day 2 어텐션 다리</li>
+        <li>15 KoGPT2 미리보기 (노트북)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 14. Summary -->
+<section class="slide">
+  <h2>정리: PyTorch 3대 특징</h2>
+  <div class="three-col" style="flex:1; min-height:0;">
+    <div class="card">
+      <h3>1. 동적 그래프</h3>
+      <p>매 forward마다 그래프 새로 — Python 제어 흐름 자유.</p>
+      <p class="small-note">if/for/while을 그대로 쓸 수 있음</p>
+    </div>
+    <div class="card">
+      <h3>2. 자동 미분</h3>
+      <p><code>backward()</code> 한 줄로 모든 파라미터 그래디언트.</p>
+      <p class="small-note">손으로 chain rule 쓸 일 없음</p>
+    </div>
+    <div class="card">
+      <h3>3. 풀스택 생태계</h3>
+      <p>HF, Lightning, vLLM 등이 모두 PyTorch 위.</p>
+      <p class="small-note">학습→배포 한 도구로</p>
+    </div>
+  </div>
+  <div class="formula" style="margin-top:18px; text-align:center;">
+"PyTorch = NumPy + GPU + Autograd + Modules"
+  </div>
+</section>
+
+<!-- 15. End -->
+<section class="slide title">
+  <h1>다음: 02. Tensor 101 🧮</h1>
+  <div class="subtitle">텐서의 shape/dtype/device · 브로드캐스팅 · view vs contiguous</div>
+  <p style="color:var(--muted); margin-top:30px;">노트북: 이번 모듈은 슬라이드만 — 다음 모듈부터 코드.</p>
+</section>
+
+</div></div>
+
+<div class="navbar">
+  <button id="prevBtn">←</button>
+  <div class="progress"><div class="bar" id="progBar"></div></div>
+  <div class="pageinfo" id="pageInfo">1 / N</div>
+  <button id="nextBtn">→</button>
+</div>
+
+<script>
+(function(){
+  const SLIDE_W=1280, SLIDE_H=720;
+  const stage=document.getElementById('stage'), wrap=document.getElementById('slideWrap');
+  function fit(){ const w=stage.clientWidth-24, h=stage.clientHeight-24;
+    wrap.style.transform=`scale(${Math.min(w/SLIDE_W,h/SLIDE_H)})`; }
+  window.addEventListener('resize', fit); fit();
+  const slides=document.querySelectorAll('.slide'); let idx=0;
+  function go(n){ idx=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,i)=>s.classList.toggle('active',i===idx));
+    document.getElementById('pageInfo').textContent=(idx+1)+' / '+slides.length;
+    document.getElementById('progBar').style.width=((idx+1)/slides.length*100)+'%';
+    document.getElementById('prevBtn').disabled=idx===0;
+    document.getElementById('nextBtn').disabled=idx===slides.length-1;
+    if(history.replaceState) history.replaceState(null,'','#'+(idx+1)); }
+  document.getElementById('prevBtn').onclick=()=>go(idx-1);
+  document.getElementById('nextBtn').onclick=()=>go(idx+1);
+  document.addEventListener('keydown',e=>{ if(e.target.matches('input,select,textarea')) return;
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();go(idx+1);}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(idx-1);}
+    else if(e.key==='Home') go(0); else if(e.key==='End') go(slides.length-1); });
+  const h=parseInt(location.hash.replace('#',''),10); if(!isNaN(h)) go(h-1); else go(0);
+
+  function plotSVG({w,h,xMin,xMax,yMin,yMax,curves,dots=[],vlines=[],hlines=[],extras='',title=''}){
+    const PL=38,PR=10,PT=title?22:10,PB=24;
+    const sx=x=>PL+(x-xMin)/(xMax-xMin)*(w-PL-PR);
+    const sy=y=>PT+(1-(y-yMin)/(yMax-yMin))*(h-PT-PB);
+    let ax='';
+    for(let x=Math.ceil(xMin);x<=Math.floor(xMax);x++) ax+=`<line x1="${sx(x)}" y1="${PT}" x2="${sx(x)}" y2="${h-PB}" stroke="#f1f3f5"/>`;
+    for(let y=Math.ceil(yMin);y<=Math.floor(yMax);y++) ax+=`<line x1="${PL}" y1="${sy(y)}" x2="${w-PR}" y2="${sy(y)}" stroke="#f1f3f5"/>`;
+    if(yMin<=0&&yMax>=0) ax+=`<line x1="${PL}" y1="${sy(0)}" x2="${w-PR}" y2="${sy(0)}" stroke="#9aa0a6"/>`;
+    if(xMin<=0&&xMax>=0) ax+=`<line x1="${sx(0)}" y1="${PT}" x2="${sx(0)}" y2="${h-PB}" stroke="#9aa0a6"/>`;
+    let cs='';
+    for(const c of curves){ if(!c||!c.points||c.points.length<2) continue;
+      let d='';
+      c.points.forEach((p,i)=>{ const px=sx(p[0]), py=sy(p[1]); if(!isFinite(py)) return;
+        d+=(d.length===0?'M':'L')+px.toFixed(1)+' '+Math.max(PT,Math.min(h-PB,py)).toFixed(1)+' '; });
+      cs+=`<path d="${d}" stroke="${c.color}" stroke-width="${c.width||2}" fill="none" ${c.dash?'stroke-dasharray="'+c.dash+'"':''} opacity="${c.opacity||1}"/>`;
+      if(c.label){ const lp=c.points[c.points.length-1];
+        cs+=`<text x="${sx(lp[0])-4}" y="${sy(lp[1])-4}" font-size="11" font-weight="700" fill="${c.color}" text-anchor="end">${c.label}</text>`; }
+    }
+    let ds=''; for(const d of dots){ ds+=`<circle cx="${sx(d.x)}" cy="${sy(d.y)}" r="${d.r||5}" fill="${d.color||'#ef4444'}"/>`;
+      if(d.label) ds+=`<text x="${sx(d.x)+8}" y="${sy(d.y)-6}" font-size="11" font-weight="700" fill="${d.color||'#ef4444'}">${d.label}</text>`; }
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" font-family="sans-serif">
+      ${title?`<text x="${w/2}" y="14" text-anchor="middle" font-weight="700" font-size="13">${title}</text>`:''}
+      <rect x="${PL}" y="${PT}" width="${w-PL-PR}" height="${h-PT-PB}" fill="#fcfcfc" stroke="#e5e7eb"/>
+      ${ax}${cs}${extras}${ds}</svg>`;
+  }
+  function linspace(a,b,n){ const r=[]; for(let i=0;i<n;i++) r.push(a+(b-a)*i/(n-1)); return r; }
+
+  // Slide 2: lines-of-code comparison bar chart
+  (function(){
+    const box=document.getElementById('whyBox'); if(!box) return;
+    const data = [
+      {label:"NumPy 직접", val:2400, color:"#d93025"},
+      {label:"Theano", val:600, color:"#fbc02d"},
+      {label:"TF 1.x", val:300, color:"#ff7043"},
+      {label:"PyTorch", val:60, color:"#2b7cff"},
+      {label:"+ Lightning", val:25, color:"#00a86b"},
+    ];
+    let bars='';
+    const W=460,H=340, PT=30, PB=40, PL=110, PR=20;
+    const max=2500;
+    data.forEach((d,i)=>{
+      const y=PT+i*((H-PT-PB)/data.length)+8;
+      const bw=(d.val/max)*(W-PL-PR);
+      bars+=`<rect x="${PL}" y="${y}" width="${bw}" height="20" fill="${d.color}"/>`;
+      bars+=`<text x="${PL-8}" y="${y+15}" text-anchor="end" font-size="12" font-weight="700">${d.label}</text>`;
+      bars+=`<text x="${PL+bw+6}" y="${y+15}" font-size="12" font-weight="700" fill="${d.color}">${d.val}</text>`;
+    });
+    box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+      <text x="${W/2}" y="18" text-anchor="middle" font-weight="700" font-size="14">ResNet50 학습 코드 라인 수 (대략)</text>
+      <rect x="${PL}" y="${PT}" width="${W-PL-PR}" height="${H-PT-PB}" fill="#fafafa" stroke="#e5e7eb"/>
+      ${bars}
+      <text x="${W/2}" y="${H-12}" text-anchor="middle" font-size="12" fill="#6b7280">lines of code (낮을수록 좋음)</text>
+    </svg>`;
+  })();
+
+  // Slide 3: Timeline
+  (function(){
+    const box=document.getElementById('tlBox'); if(!box) return;
+    const events = {
+      2007:{title:"Theano 첫 발표", desc:"Montreal 대학. 최초의 자동미분 기반 GPU 프레임워크."},
+      2010:{title:"Theano 1.0", desc:"수많은 후속 프레임워크의 직접적 조상."},
+      2013:{title:"Caffe 발표", desc:"이미지 분야에서 빠르게 인기. C++ 기반."},
+      2015:{title:"TensorFlow 1.0 (Google)", desc:"정적 그래프, 분산 학습. 산업 표준으로 부상."},
+      2016:{title:"PyTorch 0.1 (Facebook)", desc:"동적 그래프, 파이썬다움. 연구자 사로잡음."},
+      2017:{title:"Keras → TF 통합", desc:"고수준 API 표준화. ONNX 등장."},
+      2018:{title:"학계 점유율 역전", desc:"NeurIPS 논문 PyTorch 점유율 TF 추월. JAX 첫 공개."},
+      2019:{title:"PyTorch 1.0 + TorchScript", desc:"배포까지 지원. HuggingFace transformers 폭증."},
+      2020:{title:"PyTorch Lightning 안정화", desc:"학습 루프 추상화 표준."},
+      2021:{title:"GPT-3 / 대형 LLM 시대", desc:"분산 학습, ZeRO, FairScale."},
+      2022:{title:"Stable Diffusion / ChatGPT", desc:"PyTorch 가중치가 사실상 표준 형식."},
+      2023:{title:"PyTorch 2.0 — torch.compile", desc:"동적+컴파일 하이브리드. 30~80% 가속."},
+      2024:{title:"Llama 3 / 멀티모달 표준화", desc:"vLLM, Llama.cpp, MLX 등 PyTorch 생태계 확장."}
+    };
+    const yEl=document.getElementById('tlYear'), yV=document.getElementById('tlYearV');
+    const tEl=document.getElementById('tlTitle'), dEl=document.getElementById('tlDesc');
+    function nearest(y){ const ks=Object.keys(events).map(Number).sort((a,b)=>a-b);
+      let best=ks[0]; for(const k of ks) if(k<=y) best=k; return best; }
+    function render(){
+      const y=parseInt(yEl.value); yV.textContent=y;
+      const k=nearest(y); tEl.textContent=`${k}: ${events[k].title}`;
+      dEl.textContent=events[k].desc;
+      // Draw timeline
+      const W=460,H=340;
+      const xMin=2007,xMax=2024;
+      const sx=v=>50+(v-xMin)/(xMax-xMin)*(W-80);
+      let pts='';
+      Object.keys(events).map(Number).forEach(yr=>{
+        const px=sx(yr); const fill=yr===k?"#ff7043":"#2b7cff";
+        const r=yr===k?9:5;
+        pts+=`<line x1="${px}" y1="180" x2="${px}" y2="220" stroke="#dadce0"/>`;
+        pts+=`<circle cx="${px}" cy="200" r="${r}" fill="${fill}"/>`;
+        pts+=`<text x="${px}" y="240" text-anchor="middle" font-size="9" ${yr===k?'font-weight="700" fill="#ff7043"':'fill="#6b7280"'}>${yr}</text>`;
+      });
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <text x="${W/2}" y="22" text-anchor="middle" font-weight="700" font-size="14">딥러닝 프레임워크 18년</text>
+        <line x1="50" y1="200" x2="${W-30}" y2="200" stroke="#9aa0a6" stroke-width="2"/>
+        ${pts}
+        <text x="${W/2}" y="280" text-anchor="middle" font-size="12" fill="#6b7280">슬라이더로 연도를 골라보세요</text>
+      </svg>`;
+    }
+    yEl.addEventListener('input', render); render();
+  })();
+
+  // Slide 4: Static vs Dynamic
+  (function(){
+    const box=document.getElementById('grBox'); if(!box) return;
+    const mode=document.getElementById('grMode'), nE=document.getElementById('grN'), nV=document.getElementById('grNV');
+    function render(){
+      const n=parseInt(nE.value); nV.textContent=n;
+      const isDyn = mode.value==="dynamic";
+      let nodes='';
+      const W=460,H=340;
+      // Build a chain: x -> *2 -> +1 -> *2 -> +1 ... (n times) -> loss
+      const nNodes=n+2;
+      const startX=40, gap=Math.min(60,(W-80)/(nNodes-1));
+      for(let i=0;i<nNodes;i++){
+        const cx=startX+i*gap, cy=170;
+        const isInput=i===0, isOut=i===nNodes-1;
+        const fill = isInput?"#e3f2fd": isOut?"#ffebee":"#fff3e0";
+        const stroke= isInput?"#1565c0": isOut?"#c62828":"#e65100";
+        const label = isInput?"x": isOut?"loss": (i%2===1?"·2":"+1");
+        nodes+=`<circle cx="${cx}" cy="${cy}" r="18" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+        nodes+=`<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="11" font-weight="700">${label}</text>`;
+        if(i<nNodes-1) nodes+=`<line x1="${cx+18}" y1="${cy}" x2="${cx+gap-18}" y2="${cy}" stroke="#9aa0a6" stroke-width="1.5" marker-end="url(#mkA)"/>`;
+      }
+      const stamp = isDyn ? "Forward 마다 그래프를 새로 그림 ✨" : "한 번 컴파일된 고정 그래프 (n 변경 시 재컴파일)";
+      const stampColor= isDyn ? "#00a86b" : "#d93025";
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <defs><marker id="mkA" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#9aa0a6"/></marker></defs>
+        <text x="${W/2}" y="20" text-anchor="middle" font-weight="700" font-size="14">${isDyn?"동적 그래프 (PyTorch)":"정적 그래프 (TF 1.x)"}</text>
+        <text x="${W/2}" y="40" text-anchor="middle" font-size="12" fill="${stampColor}">${stamp}</text>
+        ${nodes}
+        <text x="${W/2}" y="240" text-anchor="middle" font-size="12" fill="#6b7280">노드 수 = ${nNodes} (n=${n})</text>
+        <text x="${W/2}" y="270" text-anchor="middle" font-size="11" fill="#6b7280">${isDyn?"if/for/while을 그대로 사용 가능":"제어 흐름은 tf.cond, tf.while_loop 등 별도 API"}</text>
+      </svg>`;
+    }
+    mode.addEventListener('change',render); nE.addEventListener('input',render); render();
+  })();
+
+  // Slide 6: hello world demo
+  (function(){
+    const box=document.getElementById('helloBox'); if(!box) return;
+    const xs=linspace(-3,3,80);
+    const curve=xs.map(x=>[x, x*x]);
+    const tan=linspace(-3,3,2).map(x=>[x, 4 + 4*(x-2)]); // tangent at x=2
+    box.innerHTML = plotSVG({
+      w:460,h:340,xMin:-3,xMax:3,yMin:-1,yMax:9,
+      curves:[
+        {color:"#2b7cff", points:curve, width:3, label:"y = x²"},
+        {color:"#ff7043", points:tan, width:2, dash:"5,4", label:"tangent"}
+      ],
+      dots:[{x:2,y:4,color:"#ef4444",r:6,label:"x.grad = 2x = 4"}],
+      title:"y = x² 의 한 점 미분"
+    });
+  })();
+
+  // Slide 8: decision tree
+  (function(){
+    const useE=document.getElementById('dcUse'), expE=document.getElementById('dcExp');
+    const nameE=document.getElementById('dcRecName'), whyE=document.getElementById('dcRecWhy');
+    const box=document.getElementById('dcBox');
+    function render(){
+      const u=useE.value, e=expE.value;
+      let name="PyTorch", why="대부분의 시작점.", color="#2b7cff";
+      if(u==="research"){ name="PyTorch"; why="논문 90%가 PyTorch 코드. 가장 빠른 실험 사이클."; color="#2b7cff"; }
+      else if(u==="prod"){ name="PyTorch + TorchServe / vLLM"; why="학습한 모델을 같은 도구로 배포. ONNX 변환도 안정적."; color="#00a86b"; }
+      else if(u==="mobile"){ name="TensorFlow Lite (TFLite)"; why="안드로이드/iOS 양자화 + 변환 도구가 가장 성숙."; color="#ff7043"; }
+      else if(u==="largescale"){ name="JAX (또는 PyTorch FSDP)"; why="TPU/대규모 분산이면 JAX. GPU 클러스터면 PyTorch FSDP."; color="#7c4dff"; }
+      if(e==="fp" && u==="research"){ name="JAX"; why="순수 함수형이 익숙하면 JAX의 jit/vmap이 매우 강력."; color="#7c4dff"; }
+      if(e==="none"){ name="PyTorch + Lightning"; why="가장 부드러운 입문 경로. 한국어 자료 풍부."; color="#2b7cff"; }
+      nameE.textContent=name; whyE.textContent=why;
+      const W=460,H=340;
+      box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+        <text x="${W/2}" y="24" text-anchor="middle" font-weight="700" font-size="14">의사결정 트리</text>
+        <rect x="180" y="50" width="100" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+        <text x="230" y="74" text-anchor="middle" font-size="12" font-weight="700">목적?</text>
+        <line x1="230" y1="90" x2="100" y2="140" stroke="#9aa0a6"/>
+        <line x1="230" y1="90" x2="230" y2="140" stroke="#9aa0a6"/>
+        <line x1="230" y1="90" x2="360" y2="140" stroke="#9aa0a6"/>
+        <rect x="50" y="140" width="100" height="34" rx="6" fill="${u==='research'?color:'#f9fafb'}" stroke="#9aa0a6"/>
+        <text x="100" y="161" text-anchor="middle" font-size="11">research</text>
+        <rect x="180" y="140" width="100" height="34" rx="6" fill="${u==='prod'?color:'#f9fafb'}" stroke="#9aa0a6"/>
+        <text x="230" y="161" text-anchor="middle" font-size="11">prod</text>
+        <rect x="310" y="140" width="100" height="34" rx="6" fill="${u==='mobile'||u==='largescale'?color:'#f9fafb'}" stroke="#9aa0a6"/>
+        <text x="360" y="161" text-anchor="middle" font-size="11">mobile/large</text>
+        <rect x="120" y="220" width="220" height="60" rx="10" fill="${color}" stroke="${color}"/>
+        <text x="230" y="247" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">→ ${name}</text>
+        <text x="230" y="268" text-anchor="middle" font-size="11" fill="#fff">팀 경험: ${e==='fp'?'함수형':(e==='none'?'입문':'파이썬')}</text>
+      </svg>`;
+    }
+    useE.addEventListener('change',render); expE.addEventListener('change',render); render();
+  })();
+
+  // Slide 10: tensor box static viz
+  (function(){
+    const box=document.getElementById('tensorBox'); if(!box) return;
+    const W=460,H=340;
+    let cells='';
+    const rows=3, cols=4;
+    const cw=50, ch=44, x0=120, y0=60;
+    for(let i=0;i<rows;i++) for(let j=0;j<cols;j++){
+      const v=(Math.sin(i*1.7+j*0.9)*1.5).toFixed(2);
+      cells+=`<rect x="${x0+j*cw}" y="${y0+i*ch}" width="${cw-4}" height="${ch-4}" fill="#eef3ff" stroke="#2b7cff"/>`;
+      cells+=`<text x="${x0+j*cw+(cw-4)/2}" y="${y0+i*ch+(ch-4)/2+4}" text-anchor="middle" font-size="11" font-weight="700">${v}</text>`;
+    }
+    box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="sans-serif">
+      <text x="${W/2}" y="24" text-anchor="middle" font-weight="700" font-size="14">torch.randn(3, 4)</text>
+      ${cells}
+      <text x="${W/2}" y="240" text-anchor="middle" font-size="12">shape = (3, 4)</text>
+      <text x="${W/2}" y="262" text-anchor="middle" font-size="12">dtype = torch.float32 (4 bytes/element)</text>
+      <text x="${W/2}" y="284" text-anchor="middle" font-size="12">device = cpu / cuda / mps</text>
+      <text x="${W/2}" y="310" text-anchor="middle" font-size="12" fill="#6b7280">총 메모리 = 3 × 4 × 4 = 48 bytes</text>
+    </svg>`;
+  })();
+
+  // Slide 11: autograd preview
+  (function(){
+    const box=document.getElementById('agBox'); if(!box) return;
+    const wEl=document.getElementById('agW'), wV=document.getElementById('agWV');
+    const lV=document.getElementById('agLV'), gV=document.getElementById('agGV');
+    function render(){
+      const w=parseFloat(wEl.value); wV.textContent=w.toFixed(2);
+      const L=Math.pow(3*w-6,2), g=2*(3*w-6)*3;
+      lV.textContent=L.toFixed(2); gV.textContent=g.toFixed(2);
+      const xs=linspace(-3,6,160);
+      const curve=xs.map(x=>[x, Math.pow(3*x-6,2)]);
+      const tan=linspace(-3,6,2).map(x=>[x, L + g*(x-w)]);
+      box.innerHTML=plotSVG({
+        w:460,h:340,xMin:-3,xMax:6,yMin:-5,yMax:200,
+        curves:[
+          {color:"#2b7cff", points:curve, width:3, label:"loss(w)"},
+          {color:"#ff7043", points:tan, width:2, dash:"5,4"}
+        ],
+        dots:[{x:w,y:L,color:"#ef4444",r:6}],
+        title:`w=${w.toFixed(2)} → loss=${L.toFixed(2)}, grad=${g.toFixed(2)}`
+      });
+    }
+    wEl.addEventListener('input',render); render();
+  })();
+
+})();
+</script>
+</body>
+</html>
