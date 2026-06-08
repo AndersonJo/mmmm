@@ -529,6 +529,7 @@ def plot_sentiment_bars(texts, labels, scores):
 
 def plot_confusion_matrix(y_true, y_pred, labels=None):
     """Seaborn heatmap of a confusion matrix with count and percentage annotations."""
+    _configure_korean_matplotlib_font()
     from sklearn.metrics import confusion_matrix as sk_cm
     try:
         import seaborn as sns
@@ -1186,6 +1187,7 @@ def display_search_results(query: str, results: list, scores: list):
 
 def plot_dataset_eda(df):
     """Show class distribution bar chart and text-length histogram side by side."""
+    _configure_korean_matplotlib_font()
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
     ax = axes[0]
